@@ -31,10 +31,10 @@ references:
     url: "https://nvlpubs.nist.gov/nistpubs/jres/057/jresv57n2p91_A1b.pdf"
     accessed: "2026-11-13"
   - id: parker_ord5700
-    citation: "Parker Hannifin, Parker O-Ring Handbook, ORD 5700 (current published edition; edition/year to be recorded when read)."
+    citation: "Parker Hannifin, Parker O-Ring Handbook, ORD 5700, Sections II (Basic O-Ring Elastomers), III (O-Ring Applications) and IV (Static O-Ring Sealing)."
     url: null
-    accessed: null
-    notes: "Automated download refused by the publisher site; user to supply the PDF."
+    accessed: "2026-11-13"
+    notes: "Section PDFs supplied by the user; the edition year is not printed in the supplied sections. Page numbers are cited as printed (e.g. 2-25, 3-3)."
   - id: nist_webbook
     citation: "NIST Chemistry WebBook, NIST Standard Reference Database 69."
     url: "https://webbook.nist.gov/chemistry/"

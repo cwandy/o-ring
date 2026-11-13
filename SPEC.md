@@ -200,3 +200,13 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
 - **K17 – ISO 3601-1:** Kapsam ve sınıflar Faz 5'te kaynağa karşı doğrulanacak. Varsayılan olarak her iki seri de yüklenir.
 - **K18 – Veri dizini:** `data/` repo kökündedir. Loader dosya yolunu parametre olarak ya da `ORING_DESIGNER_DATA` ortam değişkeninden alır.
 - **K19 – `dynamic_reciprocating`:** YAML'da yer tutucu olarak bulunur. İmplementasyon sonraki bir faza bırakılmıştır.
+- **K20 – Düşük sıcaklık kontrolü (Parker ile güncellendi, K4'ü günceller):** Parker aile bazında Tg veya TR-10 vermiyor; bunun yerine önerilen statik düşük sıcaklık sınırını veriyor (≈ TR-10 − 8 °C, ORD 5700 §2.13.2). `low_temp_limit_K` bu değerdir. Kurallar:
+  - `T_seal < low_temp_limit_K` ise FAIL.
+  - `low_temp_limit_K ≤ T_seal < low_temp_limit_K + 8 K` ise WARN (dinamik ya da darbeli basınçta sızdırmazlık TR-10 altında sağlanamayabilir).
+  - Compound'a özgü `tg_K` girilmişse `T_seal < tg_K` ise ayrıca FAIL ("camsı bölge").
+  - "Bağımlı olduğu compound'un TR-10'u" girilirse `low_temp_limit_K = TR-10 − 8 K` kullanılır.
+- **K21 – Ekstrüzyon karşılaştırması:** Parker Şekil 3-2'nin x ekseni "toplam diametral boşluk"tur ve konsantriklik korunuyorsa radyal boşluğa eşittir; yani tek taraftaki en büyük ekstrüzyon aralığıdır. Program bunu eksantriklikle bir tarafa toplanmış en büyük aralıkla karşılaştırır. Kurallar:
+  - Silikon ve florosilikon için grafik değeri 0.4 ile çarpılır (Şekil 3-2 dipnotu).
+  - Ara sertlikte bir alttaki eğri kullanılır.
+  - 100 psi altında 100 psi değeri kullanılır.
+- **K22 – Kural şiddeti:** `design_rules.yaml` içindeki her sınırın bir `severity` (warn/fail) alanı vardır ve kullanıcı bunu değiştirebilir.

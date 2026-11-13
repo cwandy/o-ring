@@ -19,6 +19,7 @@ import yaml
 
 from .models import (
     DataQuality,
+    CommonRules,
     ExtrusionLimits,
     Fluid,
     HousingMaterial,
@@ -80,6 +81,7 @@ class Dataset:
     housing_materials: dict[str, HousingMaterial]
     fluids: dict[str, Fluid]
     rule_sets: list[RuleSet]
+    common_rules: CommonRules
     extrusion_limits: ExtrusionLimits
     raw: dict[str, dict[str, Any]] = field(repr=False)
 
@@ -108,6 +110,7 @@ def load_dataset(data_dir: str | os.PathLike | None = None) -> Dataset:
     )
     fluids = _by_id([Fluid.model_validate(f) for f in raw["fluids"].get("fluids", [])], "fluid")
     rule_sets = [RuleSet.model_validate(r) for r in raw["design_rules"].get("rule_sets", [])]
+    common_rules = CommonRules.model_validate(raw["design_rules"].get("common", {}))
     extrusion = ExtrusionLimits.model_validate(
         {k: v for k, v in raw["extrusion_limits"].items() if k != VERIFY_KEY}
     )
@@ -123,7 +126,9 @@ def load_dataset(data_dir: str | os.PathLike | None = None) -> Dataset:
         if bad:
             raise DataError(f"fluid {fluid.id}: compatibility for unknown seal materials {sorted(bad)}")
 
-    return Dataset(root, references, seals, housings, fluids, rule_sets, extrusion, raw)
+    return Dataset(
+        root, references, seals, housings, fluids, rule_sets, common_rules, extrusion, raw
+    )
 
 
 def _iter_sources(node: Any):

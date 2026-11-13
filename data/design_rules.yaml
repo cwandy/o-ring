@@ -1,39 +1,92 @@
-# Design rule limits (user editable). Fractions, not percent (0.15 = 15 %). See SPEC.md §5.
-# Elastomer values to be taken from Parker ORD 5700 (PDF pending) -> placeholders for now.
+# Design rule limits (user editable). Fractions, not percent (0.15 = 15 %). SI units.
+# Each limit: {value, source, data_quality, notes, severity: warn|fail}.
+# Source: Parker ORD 5700 (sections and pages cited in notes).
 # dynamic_reciprocating is a placeholder only (K19).
 
 DOGRULANMALI:
-  - "Tüm elastomer limitleri (squeeze, fill, stretch, çevresel sıkışma): Parker ORD 5700'den alınacak."
+  - "Önerilen squeeze bantları Parker Design Chart 4-2 (radyal) ve 4-3 (face) tablolarından; bu tablolar endüstriyel yuvalar içindir. Havacılık için AS5857 (Design Chart 4-1) ayrıca değerlendirilebilir."
+  - "squeeze_max %30 Parker'da 'genel maksimum'; Design Chart 4-3 küçük kesitte %32'ye çıkıyor. Bu yüzden WARN seviyesinde tutuldu."
+  - "Rod tipi yuvalarda çevresel sıkışma (circumferential_compression_max) için Parker II-IV bölümlerinde değer yok."
+  - "stretch_min için sayısal değer yok; negatif stretch (o-ring yuva tabanına oturmuyor) geometrik kontrol olarak uyarılır."
   - "Termoplastik (PTFE/PCTFE) sayısal limitleri: kaynak belirlenmeli."
+
+common:
+  squeeze_min_abs_m:
+    value: 1.778e-4
+    source: parker_ord5700
+    data_quality: literature
+    severity: fail
+    notes: "3.6 (p. 3-9): minimum squeeze for all seals about .2 mm (.007 in); below about .1 mm elastomers quickly take 100 % compression set."
+  low_temp_warning_band_K:
+    value: 8.0
+    source: parker_ord5700
+    data_quality: literature
+    severity: warn
+    notes: "2.13.2 (p. 2-25): static limit is about 8 C below TR-10; dynamic or pulsing-pressure sealing may not be achieved below TR-10 (about 8 C above the static limit)."
+  backup_ring_check_pressure_Pa:
+    value: 1.0342e7
+    source: parker_ord5700
+    data_quality: literature
+    severity: warn
+    notes: "4.2 (p. 4-2): the need for back-up rings should be investigated above 103.5 bar (1500 psi)."
 
 rule_sets:
   - material_group: elastomer
     gland_type: static_radial
-    squeeze_min: {value: null, source: parker_ord5700, data_quality: placeholder}
-    squeeze_max: {value: null, source: parker_ord5700, data_quality: placeholder}
-    fill_max: {value: null, source: parker_ord5700, data_quality: placeholder}
-    stretch_min: {value: null, source: parker_ord5700, data_quality: placeholder}
-    stretch_max: {value: null, source: parker_ord5700, data_quality: placeholder}
-    circumferential_compression_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    squeeze_max: {value: 0.30, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.6: maximum recommended squeeze for static seals of most elastomers is 30 %."}
+    fill_min: {value: 0.60, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.7: most applications call for 60-85 % gland fill, optimum 75 %."}
+    fill_max: {value: 0.85, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.7"}
+    fill_hard_max: {value: 0.90, source: parker_ord5700, data_quality: literature, severity: fail, notes: "3.7: it is essential to allow at least a 10 % void in any elastomer gland."}
+    stretch_max: {value: 0.05, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.3 / 3.5: installed I.D. stretch should not exceed 5 %; more shortens life."}
+    stretch_min: {value: null, data_quality: placeholder, severity: warn}
+    circumferential_compression_max: {value: null, data_quality: placeholder, severity: warn}
+    recommended_squeeze:
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Design Chart 4-2 (p. 4-9), industrial static radial glands; squeeze % = (W - L)/W at the tolerance extremes."
+      bands:
+        - {cs_nominal_in: 0.070, min: 0.22, max: 0.32}
+        - {cs_nominal_in: 0.103, min: 0.17, max: 0.24}
+        - {cs_nominal_in: 0.139, min: 0.16, max: 0.23}
+        - {cs_nominal_in: 0.210, min: 0.15, max: 0.21}
+        - {cs_nominal_in: 0.275, min: 0.15, max: 0.20}
+
   - material_group: elastomer
     gland_type: static_face
-    squeeze_min: {value: null, source: parker_ord5700, data_quality: placeholder}
-    squeeze_max: {value: null, source: parker_ord5700, data_quality: placeholder}
-    fill_max: {value: null, source: parker_ord5700, data_quality: placeholder}
-    stretch_min: {value: null, source: parker_ord5700, data_quality: placeholder}
-    stretch_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    squeeze_max: {value: 0.30, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.6: 30 % in face seals is often beneficial; danger in squeezing much more."}
+    fill_min: {value: 0.60, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.7"}
+    fill_max: {value: 0.85, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.7"}
+    fill_hard_max: {value: 0.90, source: parker_ord5700, data_quality: literature, severity: fail, notes: "3.7"}
+    stretch_max: {value: 0.05, source: parker_ord5700, data_quality: literature, severity: warn, notes: "3.3"}
+    face_seating_tolerance_rel: {value: 0.01, source: parker_ord5700, data_quality: literature, severity: warn, notes: "Design Chart 4-3 (p. 4-18): internal pressure H_o = mean O-ring OD, tolerance minus 1 % of mean OD; external pressure H_i = mean ID, tolerance plus 1 % of mean ID."}
+    face_seating_tolerance_abs_m: {value: 1.524e-3, source: parker_ord5700, data_quality: literature, severity: warn, notes: "Design Chart 4-3: ... but not more than .060 in."}
+    recommended_squeeze:
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Design Chart 4-3 (p. 4-18), face seal glands (metal-to-metal contact assumed)."
+      bands:
+        - {cs_nominal_in: 0.070, min: 0.19, max: 0.32}
+        - {cs_nominal_in: 0.103, min: 0.20, max: 0.30}
+        - {cs_nominal_in: 0.139, min: 0.20, max: 0.30}
+        - {cs_nominal_in: 0.210, min: 0.21, max: 0.30}
+        - {cs_nominal_in: 0.275, min: 0.21, max: 0.29}
+        - {cs_nominal_in: 0.375, min: 0.22, max: 0.28}
+        - {cs_nominal_in: 0.500, min: 0.22, max: 0.27}
+
   - material_group: elastomer
     gland_type: dynamic_reciprocating
-    notes: "Placeholder only; not implemented (K19)."
+    notes: "Placeholder only; not implemented (K19). Parker 3.6: dynamic max squeeze about 16 % (small cross-sections up to 25 %)."
+
   - material_group: thermoplastic
     gland_type: static_radial
-    squeeze_min: {value: null, data_quality: placeholder}
-    squeeze_max: {value: null, data_quality: placeholder}
-    fill_max: {value: null, data_quality: placeholder}
+    squeeze_max: {value: null, data_quality: placeholder, severity: warn}
+    fill_max: {value: null, data_quality: placeholder, severity: warn}
+    fill_hard_max: {value: null, data_quality: placeholder, severity: fail}
     warnings: [split_groove_required, cold_flow, spring_energized_recommended]
+
   - material_group: thermoplastic
     gland_type: static_face
-    squeeze_min: {value: null, data_quality: placeholder}
-    squeeze_max: {value: null, data_quality: placeholder}
-    fill_max: {value: null, data_quality: placeholder}
+    squeeze_max: {value: null, data_quality: placeholder, severity: warn}
+    fill_max: {value: null, data_quality: placeholder, severity: warn}
+    fill_hard_max: {value: null, data_quality: placeholder, severity: fail}
     warnings: [cold_flow, spring_energized_recommended]

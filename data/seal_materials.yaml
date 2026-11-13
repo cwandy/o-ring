@@ -12,7 +12,10 @@
 # QualifiedValue fields: {value, source (references.yaml id), data_quality, notes}.
 
 DOGRULANMALI:
-  - "Elastomer Tg, TR-10, sertlik ve üst sıcaklık sınırları: Parker ORD 5700'den alınacak (PDF bekleniyor)."
+  - "Elastomer düşük/yüksek sıcaklık sınırları polimer ailesi seviyesinde (Parker 2.2). Kullanılan compound'un TR-10 değeri ile doğrulanmalı."
+  - "Parker'da düşük sıcaklık marjı tutarsız: 2.13.2 'TR-10 - 8 C', 3.10.2 'TR-10 - 15 C'. Program 8 C kullanıyor (Parker'ın kendi sınırlarının dayanağı)."
+  - "PVMQ düşük sıcaklık sınırı (-115 C) aday değer: Parker 'özel silikon compound'lar' diyor, PVMQ demiyor."
+  - "Tg ve TR-10 değerleri compound'a özgü; hiçbir malzeme için girilmedi."
   - "NBR, EPDM, FKM, FFKM, PVMQ: kaynaklı ΔL/L tablosu yok (K3: boş). Tedarikçi/test verisi gerekli."
   - "VMQ ΔL/L: tek bir compound (Dow Corning Silastic 160, 77 Shore A2, 1952). Kullanılan compound için doğrulanmalı."
   - "PTFE 274-383 K: Kirby (1956) Şekil 2'den sayısallaştırıldı, Tablo 2'ye çapalandı (en büyük düzeltme 0.019 %)."
@@ -23,46 +26,91 @@ materials:
   - id: nbr
     name: "NBR (nitril)"
     group: elastomer
-    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
+    low_temp_limit_K:
+      value: 239.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.1 'Cold flexibility: depending on individual compound, between -34 C and -57 C'. Conservative (warm) end; low-temperature NBR grades reach -57 C. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
+    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
+    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
+    high_temp_limit_K:
+      value: 373.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.1 'Up to 100 C with shorter life @ 121 C'."
     thermal_strain: {reference_T_K: 293.15, segments: []}
 
   - id: epdm
     name: "EPDM"
     group: elastomer
-    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
+    low_temp_limit_K:
+      value: 216.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.4 'Down to approximately -57 C'. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
+    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
+    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
+    high_temp_limit_K:
+      value: 423.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.4 'Up to 150 C (max. 204 C in water and/or steam)'."
     thermal_strain: {reference_T_K: 293.15, segments: []}
 
   - id: fkm
     name: "FKM (florokarbon)"
     group: elastomer
-    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
+    low_temp_limit_K:
+      value: 247.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.7: static limit approximately -26 C, certain compounds to -46 C; dynamic -15 to -18 C. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
+    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
+    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
+    high_temp_limit_K:
+      value: 477.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.7 'Up to 204 C and higher temperatures with shorter life expectancy'."
     thermal_strain: {reference_T_K: 293.15, segments: []}
 
   - id: ffkm
     name: "FFKM (perfloroelastomer)"
     group: elastomer
-    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
+    low_temp_limit_K:
+      value: 255.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.10 'Cold flexibility -18 C to -26 C'. Conservative (warm) end. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
+    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
+    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
+    high_temp_limit_K:
+      value: 593.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.10 'Up to 320 C'."
     thermal_strain: {reference_T_K: 293.15, segments: []}
 
   - id: vmq
     name: "VMQ (silikon)"
     group: elastomer
-    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
+    low_temp_limit_K:
+      value: 219.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.13 'Down to approximately -54 C, special compounds down to -115 C'; 3.10.2: S0383-70 to -115 C. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
+    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
+    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
+    high_temp_limit_K:
+      value: 477.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.13 'Up to approximately 204 C, special compounds up to 260 C'."
     thermal_strain:
       reference_T_K: 293.0
       segments:
@@ -98,10 +146,15 @@ materials:
   - id: pvmq
     name: "PVMQ (fenil silikon)"
     group: elastomer
-    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
+    low_temp_limit_K:
+      value: 158.15
+      source: parker_ord5700
+      data_quality: placeholder
+      notes: "Candidate only: Parker gives -115 C for 'special' silicone compounds (2.2.13; S0383-70 in 3.10.2) without naming PVMQ. Verify against the compound datasheet."
+    tg_K: {value: null, data_quality: placeholder}
+    tr10_K: {value: null, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder, notes: "Parker gives 204 C for silicones in general (2.2.13); PVMQ not named."}
     thermal_strain: {reference_T_K: 293.15, segments: []}
 
   # ------------------------------------------------------------------ thermoplastics

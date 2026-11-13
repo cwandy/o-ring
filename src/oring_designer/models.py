@@ -152,6 +152,7 @@ class SealMaterial(_Strict):
     grade: str | None = None
     hardness_shore_a: QualifiedValue | None = None
     hardness_shore_d: QualifiedValue | None = None
+    low_temp_limit_K: QualifiedValue | None = None
     tg_K: QualifiedValue | None = None
     tr10_K: QualifiedValue | None = None
     high_temp_limit_K: QualifiedValue | None = None
@@ -206,18 +207,60 @@ class Fluid(_Strict):
 # --------------------------------------------------------------------------- design rules
 
 
+class RuleLimit(QualifiedValue):
+    """A design-rule limit; ``severity`` is the status given when it is violated."""
+
+    severity: Literal["warn", "fail"] = "warn"
+
+
+class SqueezeBand(_Strict):
+    cs_nominal_in: float
+    min: float
+    max: float
+
+
+class RecommendedSqueeze(_Sourced):
+    bands: list[SqueezeBand]
+
+    def band_for(self, cs_m: float, tol_in: float = 0.005) -> SqueezeBand | None:
+        """Band whose nominal cross-section is within ``tol_in`` inch of ``cs_m``."""
+        cs_in = cs_m / 0.0254
+        best = min(self.bands, key=lambda b: abs(b.cs_nominal_in - cs_in))
+        return best if abs(best.cs_nominal_in - cs_in) <= tol_in else None
+
+
 class RuleSet(_Strict):
     material_group: Literal["elastomer", "thermoplastic"]
     gland_type: Literal["static_radial", "static_face", "dynamic_reciprocating"]
-    squeeze_min: QualifiedValue | None = None
-    squeeze_max: QualifiedValue | None = None
-    fill_max: QualifiedValue | None = None
-    stretch_min: QualifiedValue | None = None
-    stretch_max: QualifiedValue | None = None
-    circumferential_compression_max: QualifiedValue | None = None
+    squeeze_max: RuleLimit | None = None
+    fill_min: RuleLimit | None = None
+    fill_max: RuleLimit | None = None
+    fill_hard_max: RuleLimit | None = None
+    stretch_min: RuleLimit | None = None
+    stretch_max: RuleLimit | None = None
+    circumferential_compression_max: RuleLimit | None = None
+    face_seating_tolerance_rel: RuleLimit | None = None
+    face_seating_tolerance_abs_m: RuleLimit | None = None
+    recommended_squeeze: RecommendedSqueeze | None = None
     warnings: list[str] = Field(default_factory=list)
     notes: str | None = None
 
 
+class CommonRules(_Strict):
+    squeeze_min_abs_m: RuleLimit
+    low_temp_warning_band_K: RuleLimit
+    backup_ring_check_pressure_Pa: RuleLimit
+
+
+class ExtrusionCurve(_Strict):
+    hardness_shore_a: float
+    points: list[tuple[float, float]] = Field(min_length=2)  # (pressure, clearance), source units
+
+
 class ExtrusionLimits(_Sourced):
-    curves: list[dict] = Field(default_factory=list)
+    pressure_unit: Literal["psi"]
+    clearance_unit: Literal["in"]
+    silicone_clearance_factor: float
+    silicone_factor_notes: str | None = None
+    reference_temperature_K: float | None = None
+    curves: list[ExtrusionCurve] = Field(default_factory=list)
