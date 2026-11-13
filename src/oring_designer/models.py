@@ -241,6 +241,10 @@ class GlandDimensionRow(_Strict):
     radius_min_in: float | None = None
     radius_max_in: float | None = None
     eccentricity_max_in: float | None = None
+    depth_min_in: float | None = None
+    depth_max_in: float | None = None
+    width_min_in: float | None = None
+    width_max_in: float | None = None
 
 
 class GlandDimensions(_Sourced):

@@ -54,4 +54,4 @@ def test_streamlit_hello_page_renders():
 
     at = AppTest.from_file(str(APP)).run(timeout=30)
     assert not at.exception
-    assert "O-Ring" in at.title[0].value
+    assert "Yuva Hesaplayıcı" in at.title[0].value

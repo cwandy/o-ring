@@ -53,13 +53,13 @@ rule_sets:
     gland_dimensions:
       source: parker_ord5700
       data_quality: literature
-      notes: "Design Chart 4-2 (p. 4-9): E diametral clearance (reduce max. 50 % for silicone), R groove radius, max. eccentricity (TIR). Inches."
+      notes: "Design Chart 4-2 (p. 4-9): L gland depth, G groove width (no Parbak), E diametral clearance (reduce max. 50 % for silicone), R groove radius, max. eccentricity (TIR). Inches."
       rows:
-        - {cs_nominal_in: 0.070, clearance_min_in: 0.002, clearance_max_in: 0.005, radius_min_in: 0.005, radius_max_in: 0.015, eccentricity_max_in: 0.002}
-        - {cs_nominal_in: 0.103, clearance_min_in: 0.002, clearance_max_in: 0.005, radius_min_in: 0.005, radius_max_in: 0.015, eccentricity_max_in: 0.002}
-        - {cs_nominal_in: 0.139, clearance_min_in: 0.003, clearance_max_in: 0.006, radius_min_in: 0.010, radius_max_in: 0.025, eccentricity_max_in: 0.003}
-        - {cs_nominal_in: 0.210, clearance_min_in: 0.003, clearance_max_in: 0.006, radius_min_in: 0.020, radius_max_in: 0.035, eccentricity_max_in: 0.004}
-        - {cs_nominal_in: 0.275, clearance_min_in: 0.004, clearance_max_in: 0.007, radius_min_in: 0.020, radius_max_in: 0.035, eccentricity_max_in: 0.005}
+        - {cs_nominal_in: 0.070, clearance_min_in: 0.002, clearance_max_in: 0.005, radius_min_in: 0.005, radius_max_in: 0.015, eccentricity_max_in: 0.002, depth_min_in: 0.050, depth_max_in: 0.052, width_min_in: 0.093, width_max_in: 0.098}
+        - {cs_nominal_in: 0.103, clearance_min_in: 0.002, clearance_max_in: 0.005, radius_min_in: 0.005, radius_max_in: 0.015, eccentricity_max_in: 0.002, depth_min_in: 0.081, depth_max_in: 0.083, width_min_in: 0.140, width_max_in: 0.145}
+        - {cs_nominal_in: 0.139, clearance_min_in: 0.003, clearance_max_in: 0.006, radius_min_in: 0.010, radius_max_in: 0.025, eccentricity_max_in: 0.003, depth_min_in: 0.111, depth_max_in: 0.113, width_min_in: 0.187, width_max_in: 0.192}
+        - {cs_nominal_in: 0.210, clearance_min_in: 0.003, clearance_max_in: 0.006, radius_min_in: 0.020, radius_max_in: 0.035, eccentricity_max_in: 0.004, depth_min_in: 0.170, depth_max_in: 0.173, width_min_in: 0.281, width_max_in: 0.286}
+        - {cs_nominal_in: 0.275, clearance_min_in: 0.004, clearance_max_in: 0.007, radius_min_in: 0.020, radius_max_in: 0.035, eccentricity_max_in: 0.005, depth_min_in: 0.226, depth_max_in: 0.229, width_min_in: 0.375, width_max_in: 0.380}
 
   - material_group: elastomer
     gland_type: static_face
@@ -85,15 +85,15 @@ rule_sets:
     gland_dimensions:
       source: parker_ord5700
       data_quality: literature
-      notes: "Design Chart 4-3 (p. 4-18): R groove radius. Inches."
+      notes: "Design Chart 4-3 (p. 4-18): L gland depth, G groove width (liquids), R groove radius. Inches."
       rows:
-        - {cs_nominal_in: 0.070, radius_min_in: 0.005, radius_max_in: 0.015}
-        - {cs_nominal_in: 0.103, radius_min_in: 0.005, radius_max_in: 0.015}
-        - {cs_nominal_in: 0.139, radius_min_in: 0.010, radius_max_in: 0.025}
-        - {cs_nominal_in: 0.210, radius_min_in: 0.020, radius_max_in: 0.035}
-        - {cs_nominal_in: 0.275, radius_min_in: 0.020, radius_max_in: 0.035}
-        - {cs_nominal_in: 0.375, radius_min_in: 0.030, radius_max_in: 0.045}
-        - {cs_nominal_in: 0.500, radius_min_in: 0.030, radius_max_in: 0.045}
+        - {cs_nominal_in: 0.070, radius_min_in: 0.005, radius_max_in: 0.015, depth_min_in: 0.050, depth_max_in: 0.054, width_min_in: 0.101, width_max_in: 0.107}
+        - {cs_nominal_in: 0.103, radius_min_in: 0.005, radius_max_in: 0.015, depth_min_in: 0.074, depth_max_in: 0.080, width_min_in: 0.136, width_max_in: 0.142}
+        - {cs_nominal_in: 0.139, radius_min_in: 0.010, radius_max_in: 0.025, depth_min_in: 0.101, depth_max_in: 0.107, width_min_in: 0.177, width_max_in: 0.187}
+        - {cs_nominal_in: 0.210, radius_min_in: 0.020, radius_max_in: 0.035, depth_min_in: 0.152, depth_max_in: 0.162, width_min_in: 0.270, width_max_in: 0.290}
+        - {cs_nominal_in: 0.275, radius_min_in: 0.020, radius_max_in: 0.035, depth_min_in: 0.201, depth_max_in: 0.211, width_min_in: 0.342, width_max_in: 0.362}
+        - {cs_nominal_in: 0.375, radius_min_in: 0.030, radius_max_in: 0.045, depth_min_in: 0.276, depth_max_in: 0.286, width_min_in: 0.475, width_max_in: 0.485}
+        - {cs_nominal_in: 0.500, radius_min_in: 0.030, radius_max_in: 0.045, depth_min_in: 0.370, depth_max_in: 0.380, width_min_in: 0.638, width_max_in: 0.645}
 
   - material_group: elastomer
     gland_type: dynamic_reciprocating

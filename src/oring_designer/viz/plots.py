@@ -277,3 +277,64 @@ def se_figure(df: pd.DataFrame, temp_unit: str = "K", length_unit: str = "mm",
     fig.update_yaxes(title_text=f"[{length_unit}]", rangemode="tozero", row=2, col=1)
     fig.update_xaxes(title_text=f"{t('plots.T_housing')} [{TEMP_UNIT_LABEL[temp_unit]}]", row=2, col=1)
     return _layout(fig, 560)
+
+
+def groove_envelope_figure(per_T: pd.DataFrame, temp_unit: str, target: tuple[float, float],
+                           fill_limit: float, fill_hard: float | None = None) -> go.Figure:
+    """Groove calculator: squeeze and fill vs temperature with the tolerance envelope.
+
+    The shaded area is the range over all tolerance corners (and both sides for radial
+    glands); the line is the nominal value; the target band and fill limit are drawn.
+    """
+    x = temp_from_K(per_T["T_K"], temp_unit)
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
+                        subplot_titles=(t("plots.gc_squeeze"), t("plots.gc_fill")))
+    fig.add_hrect(exclude_empty_subplots=False, y0=target[0], y1=target[1], fillcolor="rgba(82, 81, 78, 0.12)",
+                  line=dict(color=TEXT_2, width=1, dash="dash"), layer="below", row=1, col=1)
+    fig.add_annotation(x=x.max(), y=target[1], text=t("plots.gc_target"), showarrow=False, xanchor="right",
+                       yanchor="bottom", font=dict(color=TEXT_2, size=11), row=1, col=1)
+    fig.add_trace(go.Scatter(x=x, y=per_T["squeeze_hi"], mode="lines", line=dict(width=0),
+                             showlegend=False, hoverinfo="skip"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=x, y=per_T["squeeze_lo"], mode="lines", line=dict(width=0),
+                             fill="tonexty", fillcolor="rgba(42, 120, 214, 0.30)",
+                             name=t("plots.gc_envelope"), hoverinfo="skip"), row=1, col=1)
+    _line(x, per_T["squeeze_lo"], t("plots.squeeze_min"), SERIES[0], fig=fig, row=1, col=1)
+    _line(x, per_T["squeeze_hi"], t("plots.squeeze_max"), SERIES[1], fig=fig, row=1, col=1)
+    _line(x, per_T["squeeze_nominal"], t("plots.squeeze_nominal"), TEXT, dash="dot", fig=fig, row=1, col=1)
+    fig.add_hline(exclude_empty_subplots=False, y=fill_limit, line=dict(color=TEXT_2, width=1, dash="dash"),
+                  row=2, col=1)
+    fig.add_annotation(x=x.max(), y=fill_limit, text=t("plots.gc_fill_limit", v=fill_limit), showarrow=False,
+                       xanchor="right", yanchor="bottom", font=dict(color=TEXT_2, size=11), row=2, col=1)
+    if fill_hard is not None:
+        fig.add_hline(exclude_empty_subplots=False, y=fill_hard, line=dict(color=TEXT, width=1, dash="dash"),
+                      row=2, col=1)
+        fig.add_annotation(x=x.max(), y=fill_hard, text=t("plots.gc_fill_hard", v=fill_hard), showarrow=False,
+                           xanchor="right", yanchor="bottom", font=dict(color=TEXT, size=11), row=2, col=1)
+    _line(x, per_T["fill_max"], t("plots.gc_fill_max"), SERIES[2], fig=fig, row=2, col=1)
+    _line(x, per_T["fill_nominal"], t("plots.gc_fill_nominal"), SERIES[2], dash="dot", fig=fig, row=2, col=1)
+    fig.update_yaxes(tickformat=".0%", range=_range(per_T[["squeeze_lo", "squeeze_hi"]], list(target)),
+                     row=1, col=1)
+    fig.update_yaxes(tickformat=".0%", range=_range(per_T[["fill_max", "fill_nominal"]],
+                                                    [fill_limit] + ([fill_hard] if fill_hard else [])),
+                     row=2, col=1)
+    fig.update_xaxes(title_text=f"{t('plots.temperature')} [{TEMP_UNIT_LABEL[temp_unit]}]", row=2, col=1)
+    return _layout(fig, 560)
+
+
+def range_gauge(value_lo: float, value_hi: float, band: tuple[float, float], axis_max: float,
+                title: str, limit: float | None = None) -> go.Figure:
+    """Horizontal bullet: a range (lo..hi) against a target band and an optional limit line."""
+    fig = go.Figure()
+    fig.add_shape(type="rect", x0=band[0], x1=band[1], y0=0, y1=1, fillcolor=BAND, line_width=0,
+                  layer="below")
+    fig.add_shape(type="rect", x0=value_lo, x1=value_hi, y0=0.3, y1=0.7, fillcolor=SERIES[0],
+                  line_width=0)
+    if limit is not None:
+        fig.add_shape(type="line", x0=limit, x1=limit, y0=-0.1, y1=1.1, line=dict(color=TEXT, width=2))
+    fig.update_xaxes(range=[0, axis_max], tickformat=".0%", showgrid=False, zeroline=False,
+                     tickfont=dict(color=TEXT_2, size=11))
+    fig.update_yaxes(visible=False, range=[-0.2, 1.2])
+    fig.update_layout(title=dict(text=title, font=dict(size=13)), height=120, showlegend=False,
+                      margin=dict(l=10, r=10, t=35, b=25), paper_bgcolor=SURFACE, plot_bgcolor=SURFACE,
+                      hovermode=False)
+    return fig
