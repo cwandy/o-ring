@@ -123,7 +123,7 @@ st.markdown(f"**{t('ui.overall')}: {status_label(summary_status(points))}**")
 st.subheader(t("ui.se_results"))
 status_table([(w.result.status, render_check(w.result),
                f"{ui.fmt_T(w.T_housing_K)} / {ui.fmt_T(w.T_seal_K)}") for w in worst])
-st.plotly_chart(se_figure(df, ui.T_UNIT, ui.L_UNIT, (cmin, cmax), gmax), use_container_width=True,
+st.plotly_chart(se_figure(df, ui.T_UNIT, ui.L_UNIT, (cmin, cmax), gmax), width="stretch",
                 theme=None)
 with st.expander(t("ui.data_table")):
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")

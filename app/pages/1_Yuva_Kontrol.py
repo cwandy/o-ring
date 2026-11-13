@@ -133,9 +133,9 @@ fig = squeeze_fill_figure(
     low_temp_band_K=ds.common_rules.low_temp_warning_band_K.value,
     seal_offset_K=delta,
 )
-st.plotly_chart(fig, use_container_width=True, theme=None)
+st.plotly_chart(fig, width="stretch", theme=None)
 if kind != "face":
-    st.plotly_chart(clearance_figure(df, T_UNIT, L_UNIT), use_container_width=True, theme=None)
+    st.plotly_chart(clearance_figure(df, T_UNIT, L_UNIT), width="stretch", theme=None)
 st.subheader(t("ui.section"))
 T_lo, T_hi = min(T_min, T_max), max(T_min, T_max)
 section_states = [
@@ -145,7 +145,7 @@ section_states = [
 ]
 section_view(design, ds, section_states, kind, L_UNIT, key="section_side_check")
 with st.expander(t("ui.data_table")):
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
 outputs_section(
     ReportInput(design, T_ref, state, min(T_min, T_max), max(T_min, T_max), step, mode, delta,

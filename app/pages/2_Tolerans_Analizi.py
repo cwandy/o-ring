@@ -190,7 +190,7 @@ for i, k in enumerate(outputs):
         scale=scale, fmt=(".3f" if ui.L_UNIT == "mm" else ".4f") if is_len else ".1%",
         unit=f"[{ui.L_UNIT}]" if is_len else "",
     )
-    cols[i % 2].plotly_chart(fig, use_container_width=True, theme=None)
+    cols[i % 2].plotly_chart(fig, width="stretch", theme=None)
 
 with st.expander(t("ui.sensitivities")):
     per_unit = 1e-3 if ui.L_UNIT == "mm" else 0.0254  # ratios per mm / per inch
@@ -200,9 +200,9 @@ with st.expander(t("ui.sensitivities")):
             sens.loc[k] *= per_unit
     sens = sens.rename(index=lambda k: t(f"ui.out_{k}") + ("" if k.endswith("_m") else f" / {ui.L_UNIT}"),
                        columns=field_label)
-    st.dataframe(sens.style.format("{:.4g}"), use_container_width=True)
+    st.dataframe(sens.style.format("{:.4g}"), width="stretch")
 with st.expander(t("ui.mc_table")):
-    st.dataframe(mc.samples.head(2000), use_container_width=True)
+    st.dataframe(mc.samples.head(2000), width="stretch")
 
 outputs_section(
     ReportInput(design, T_ref, state, min(s.T_housing_K for s in states), max(s.T_housing_K for s in states),

@@ -85,7 +85,7 @@ def section_view(design, ds, states: list[tuple[str, "ThermalState"]], kind: str
     gl = design.gland
     fig = section_figure(panels, kind, side, length_unit,
                          getattr(gl, "pressure_direction", "internal"), gl.corner_radius_m)
-    st.plotly_chart(fig, use_container_width=True, theme=None)
+    st.plotly_chart(fig, width="stretch", theme=None)
 
 
 def outputs_section(report_input, design, length_unit: str, key: str, label: str = "") -> None:

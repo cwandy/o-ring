@@ -198,7 +198,7 @@ fig = squeeze_fill_figure(
     low_temp_limit_K=seal.low_temp_limit_K.value if seal.low_temp_limit_K else None,
     low_temp_band_K=ds.common_rules.low_temp_warning_band_K.value,
 )
-st.plotly_chart(fig, use_container_width=True, theme=None)
+st.plotly_chart(fig, width="stretch", theme=None)
 
 st.subheader(t("ui.section"))
 section_view(p.design, ds, [(ui.fmt_T(T), ThermalState(T, T, None, T_ref))
