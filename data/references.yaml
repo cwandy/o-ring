@@ -38,12 +38,46 @@ references:
   - id: nist_webbook
     citation: "NIST Chemistry WebBook, NIST Standard Reference Database 69."
     url: "https://webbook.nist.gov/chemistry/"
-    accessed: null
+    accessed: "2026-11-13"
   - id: nasa_std_6001
     citation: "NASA-STD-6001B, Flammability, Offgassing, and Compatibility Requirements and Test Procedures."
     url: null
     accessed: null
   - id: sandia_h2_tech_ref
-    citation: "San Marchi, C. and Somerday, B.P., Technical Reference for Hydrogen Compatibility of Materials, Sandia National Laboratories, SAND2012-7321."
-    url: null
-    accessed: null
+    citation: "San Marchi, C. and Somerday, B.P., Technical Reference for Hydrogen Compatibility of Materials, Sandia National Laboratories, SAND2012-7321 (September 2012). Sections 1700 (semi-austenitic), 1810 (precipitation-strengthened martensitic), 2301 (A-286, comparison with IN718)."
+    url: "https://www.osti.gov/servlets/purl/1055634"
+    accessed: "2026-11-13"
+  - id: balseal_tr18
+    citation: "Bal Seal Engineering, Coefficients of Thermal Expansion for Common Hardware and Sealing Materials, Technical Report TR-18 (Rev. 01, 2021-10-14). Mean CTE from room temperature to T."
+    url: "https://www.balseal.com/wp-content/uploads/2021/10/Coeffcients_Of_Thermal_Expansion_For_Hardware_And_Seal_MaterialsTR_18.pdf"
+    accessed: "2026-11-13"
+    notes: "Interpretation (mean coefficient from RT to T) verified: 304 SS at -73 C gives -1.393e-3, NIST TRC fit -1.392e-3."
+  - id: sandia_sand80_2302
+    citation: "Rack, H.J., Physical and Mechanical Properties of Cast 17-4 PH Stainless Steel, Sandia National Laboratories SAND80-2302 (1981), Table 2."
+    url: "https://www.osti.gov/servlets/purl/6607517"
+    accessed: "2026-11-13"
+  - id: nist_trc_fe9ni
+    citation: "NIST Cryogenics Technologies Group, Material Properties: Nickel Steel (Fe-9.0 Ni), linear expansion curve fit (data 4-300 K, equation 4-265 K)."
+    url: "https://trc.nist.gov/cryogenics/materials/NickelSteel/NickelSteel_Fe9.0Ni)_rev.htm"
+    accessed: "2026-11-13"
+  - id: clark1968
+    citation: "Clark, A.F., Low Temperature Thermal Expansion of Some Metallic Alloys, Cryogenics 8 (1968) 282; summarised in AEC-NASA Tech Brief B69-10707 (Dec. 1969): the room-temperature expansion coefficient is a good indicator of the total contraction to low temperature; heat treatment has little effect unless the structure changes."
+    url: "https://ntrs.nasa.gov/api/citations/19690000623/downloads/19690000623.pdf"
+    accessed: "2026-11-13"
+  - id: chemours_ptfe_6cx
+    citation: "The Chemours Company, Teflon PTFE 6C X Fine Powder Fluoroplastic Resin, Product Information C-10119 (2/16): 'Service temperature up to 260 C (500 F)'."
+    url: "https://www.teflon.com/en/-/media/files/teflon/teflon-ptfe-6c-x-product-info.pdf"
+    accessed: "2026-11-13"
+  - id: daikin_pctfe_brochure
+    citation: "Daikin Industries, NEOFLON PCTFE product brochure, Table 3 (thermal expansion ASTM D696: 7.0e-5 /C at +30..-30 C, 5.1e-5 at -30..-100 C, 3.6e-5 at -100..-190 C) and Fig. 7."
+    url: "https://www.daikinchem.de/wp-content/uploads/2024/12/Product-Brochure-NEOFLON-PCTFE.pdf"
+    accessed: "2026-11-13"
+  - id: daikin_pctfe_m300p
+    citation: "Daikin Industries, NEOFLON PCTFE M-300P Technical Datasheet (tds-m-300p-E ver01, Mar 2018): hardness D80, melting point 212 C."
+    url: "https://www.daikinchemicals.com/library/pb_common/pdf/tds/Fluoropolymers/NEOFLON_PCTFE/tds-m-300p-E_ver01_Mar_2018.pdf"
+    accessed: "2026-11-13"
+  - id: machinerys_handbook_31
+    citation: "Oberg, E. et al., Machinery's Handbook, 31st edition, Industrial Press (2020), O-rings: solid PTFE O-ring glands (squeeze, groove width, clearance)."
+    url: "https://online.flippingbook.com/view/954046886/1390"
+    accessed: "2026-11-13"
+    notes: "Values taken from the search excerpt of the online edition (page not opened directly); verify against the printed page."

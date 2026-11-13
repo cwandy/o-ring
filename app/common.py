@@ -60,9 +60,21 @@ def result_rows(results: list[CheckResult]) -> list[tuple[Status, str, None]]:
     return [(r.status, render_check(r), None) for r in sorted(results, key=lambda r: order[r.status])]
 
 
-def data_banner(needs: bool) -> None:
-    if needs:
-        st.warning(t("ui.data_banner"), icon="⚠️")
+def data_banner(needs: bool, ds: Dataset | None = None, material_ids: tuple[str, ...] = ()) -> None:
+    """Warn about estimated data; list the estimated temperature ranges of the given materials."""
+    if not needs:
+        return
+    lines = []
+    if ds is not None:
+        mats = {**ds.seal_materials, **ds.housing_materials}
+        for mid in dict.fromkeys(material_ids):
+            m = mats.get(mid)
+            for seg in (m.thermal_strain.segments if m else []):
+                if seg.data_quality.needs_warning:
+                    T = [p[0] for p in seg.points] if hasattr(seg, "points") else list(seg.range_K)
+                    lines.append(t("ui.data_banner_item", material=m.name, T_lo=min(T), T_hi=max(T),
+                                   quality=seg.data_quality.value, source=seg.source))
+    st.warning(t("ui.data_banner") + "".join(f"\n- {x}" for x in lines), icon="⚠️")
 
 
 def section_view(design, ds, states: list[tuple[str, "ThermalState"]], kind: str, length_unit: str,

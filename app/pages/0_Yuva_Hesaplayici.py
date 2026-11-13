@@ -117,7 +117,9 @@ with st.container(border=True):
                                       step=0.005, format="%.3f", key="calc_stretch")
 
 target = (tmin, tmax) if tmin is not None and tmax is not None and tmin < tmax else None
-if not is_elastomer and target is None:
+_grp_rules = ds.rule_set(ds.seal_materials[seal_id].group,
+                        "static_face" if gland == "face" else "static_radial")
+if target is None and _grp_rules.recommended_squeeze is None:
     st.warning(t("ui.target_required"))
     st.stop()
 
@@ -150,7 +152,8 @@ except ValueError as exc:
 
 # --------------------------------------------------------------------------- headline results
 worst = [r for r, _ in res.wc.worst_results.values()]
-data_banner(any(r.data_quality is not None and r.data_quality.needs_warning for r in worst))
+data_banner(any(r.data_quality is not None and r.data_quality.needs_warning for r in worst),
+            ds, (seal_id, housing_id))
 for note in res.notes:
     if note == "backup_ring_required":
         st.error(t("ui.backup_required"))

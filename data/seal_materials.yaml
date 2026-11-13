@@ -14,98 +14,143 @@
 DOGRULANMALI:
   - "Elastomer düşük/yüksek sıcaklık sınırları polimer ailesi seviyesinde (Parker 2.2). Kullanılan compound'un TR-10 değeri ile doğrulanmalı."
   - "Parker'da düşük sıcaklık marjı tutarsız: 2.13.2 'TR-10 - 8 C', 3.10.2 'TR-10 - 15 C'. Program 8 C kullanıyor (Parker'ın kendi sınırlarının dayanağı)."
-  - "PVMQ düşük sıcaklık sınırı (-115 C) aday değer: Parker 'özel silikon compound'lar' diyor, PVMQ demiyor."
-  - "Tg ve TR-10 değerleri compound'a özgü; hiçbir malzeme için girilmedi."
-  - "NBR, EPDM, FKM, FFKM, PVMQ: kaynaklı ΔL/L tablosu yok (K3: boş). Tedarikçi/test verisi gerekli."
-  - "VMQ ΔL/L: tek bir compound (Dow Corning Silastic 160, 77 Shore A2, 1952). Kullanılan compound için doğrulanmalı."
+  - "PVMQ = Parker'ın 'düşük sıcaklık tipi silikon'u kabul edildi (-115 C sınırı, Tablo 2-5 genleşmesi). Parker ASTM adı PVMQ'yu kullanmıyor."
+  - "NBR, EPDM, FKM, PVMQ ΔL/L: Parker Tablo 2-5 iki noktalı aile ortalaması (-54 C / 24 C / 191 C). -54 C altı veri yok (PVMQ -54 C altında hesaplanamaz)."
+  - "FFKM ΔL/L: yalnızca Parker (Parofluor) doğrusal katsayısı 1.8e-4 /F."
+  - "VMQ ΔL/L: 300 K altı tek compound (Dow Corning Silastic 160, 1952); 300 K üstü Parker aile değeri."
   - "PTFE 274-383 K: Kirby (1956) Şekil 2'den sayısallaştırıldı, Tablo 2'ye çapalandı (en büyük düzeltme 0.019 %)."
-  - "PTFE ve PCTFE sertlik (Shore D) ve sıcaklık sınırları: kaynak yok."
+  - "PCTFE: 300 K üstü ΔL/L ve üst kullanım sıcaklığı için açık kaynak bulunamadı (Daikin broşürü yalnızca +30 C'ye kadar). PCTFE hesabı 300 K'e kadar yapılır."
 
 materials:
   # ------------------------------------------------------------------ elastomers
   - id: nbr
     name: "NBR (nitril)"
     group: elastomer
-    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
     low_temp_limit_K:
       value: 239.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.1 'Cold flexibility: depending on individual compound, between -34 C and -57 C'. Conservative (warm) end; low-temperature NBR grades reach -57 C. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
-    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
-    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
     high_temp_limit_K:
       value: 373.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.1 'Up to 100 C with shorter life @ 121 C'."
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+    thermal_strain:
+      reference_T_K: 297.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: parker_ord5700
+          data_quality: literature
+          notes: >-
+            Parker ORD 5700 Table 2-5 (typical, family level), Nitrile (NBR): contraction 24 -> -54 C
+            0.108 in./ft. and expansion 24 -> 191 C 0.224 in./ft. (divided by 12). Two-point mean
+            values; the curve between the points is PCHIP-interpolated.
+          points:
+            - [219.15, -0.009]
+            - [297.15, 0.0]
+            - [464.15, 0.018667]
 
   - id: epdm
     name: "EPDM"
     group: elastomer
-    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
     low_temp_limit_K:
       value: 216.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.4 'Down to approximately -57 C'. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
-    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
-    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
     high_temp_limit_K:
       value: 423.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.4 'Up to 150 C (max. 204 C in water and/or steam)'."
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+    thermal_strain:
+      reference_T_K: 297.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: parker_ord5700
+          data_quality: literature
+          notes: >-
+            Parker ORD 5700 Table 2-5 (typical, family level), Ethylene propylene (EPDM): contraction 24 -> -54 C
+            0.155 in./ft. and expansion 24 -> 191 C 0.32 in./ft. (divided by 12). Two-point mean
+            values; the curve between the points is PCHIP-interpolated.
+          points:
+            - [219.15, -0.012917]
+            - [297.15, 0.0]
+            - [464.15, 0.026667]
 
   - id: fkm
     name: "FKM (florokarbon)"
     group: elastomer
-    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
     low_temp_limit_K:
       value: 247.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.7: static limit approximately -26 C, certain compounds to -46 C; dynamic -15 to -18 C. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
-    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
-    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
     high_temp_limit_K:
       value: 477.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.7 'Up to 204 C and higher temperatures with shorter life expectancy'."
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+    thermal_strain:
+      reference_T_K: 297.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: parker_ord5700
+          data_quality: literature
+          notes: >-
+            Parker ORD 5700 Table 2-5 (typical, family level), Fluorocarbon (FKM): contraction 24 -> -54 C
+            0.156 in./ft. and expansion 24 -> 191 C 0.324 in./ft. (divided by 12). Two-point mean
+            values; the curve between the points is PCHIP-interpolated.
+          points:
+            - [219.15, -0.013]
+            - [297.15, 0.0]
+            - [464.15, 0.027]
 
   - id: ffkm
     name: "FFKM (perfloroelastomer)"
     group: elastomer
-    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
     low_temp_limit_K:
       value: 255.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.10 'Cold flexibility -18 C to -26 C'. Conservative (warm) end. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
-    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
-    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
     high_temp_limit_K:
       value: 593.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.10 'Up to 320 C'."
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+    thermal_strain:
+      reference_T_K: 297.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: parker_ord5700
+          data_quality: literature
+          notes: >-
+            Parker ORD 5700 Table 2-5, perfluoroelastomer (Parofluor): coefficient of thermal
+            expansion 1.8e-4 /F = 3.24e-4 /K only (no contraction column); applied linearly from
+            24 C over the FFKM service range (-18 C .. 320 C).
+          points:
+            - [255.15, -0.013608]
+            - [297.15, 0.0]
+            - [593.15, 0.095904]
 
   - id: vmq
     name: "VMQ (silikon)"
     group: elastomer
-    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
     low_temp_limit_K:
       value: 219.15
       source: parker_ord5700
       data_quality: literature
       notes: "Parker 2.2.13 'Down to approximately -54 C, special compounds down to -115 C'; 3.10.2: S0383-70 to -115 C. Parker's recommended static low-temperature limit is about 8 C below TR-10 (2.13.2, p. 2-25)."
-    tg_K: {value: null, data_quality: placeholder, notes: "Not given by Parker; compound specific."}
-    tr10_K: {value: null, data_quality: placeholder, notes: "Compound specific (ASTM D1329); not given per family by Parker."}
     high_temp_limit_K:
       value: 477.15
       source: parker_ord5700
@@ -142,27 +187,58 @@ materials:
             - [280, 165]
             - [293, 0]
             - [300, -119]
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: parker_ord5700
+          data_quality: literature
+          notes: >-
+            Parker ORD 5700 Table 2-5 'Silicone' expansion 24 -> 191 C 0.360 in./ft. = 0.0300,
+            re-referenced to 293 K with the Monograph value at 297.15 K (+7.05e-4):
+            (1 + 0.0300)(1 + 7.05e-4) - 1 = 0.030727. Different compound from the Monograph data
+            (slopes agree near 300 K: 1.7e-4 vs 1.8e-4 /K).
+          points:
+            - [464.15, 0.030727]
 
   - id: pvmq
     name: "PVMQ (fenil silikon)"
     group: elastomer
-    hardness_shore_a: {value: null, data_quality: placeholder, notes: "Compound specific; entered per design (extrusion check)."}
     low_temp_limit_K:
       value: 158.15
       source: parker_ord5700
-      data_quality: placeholder
-      notes: "Candidate only: Parker gives -115 C for 'special' silicone compounds (2.2.13; S0383-70 in 3.10.2) without naming PVMQ. Verify against the compound datasheet."
-    tg_K: {value: null, data_quality: placeholder}
-    tr10_K: {value: null, data_quality: placeholder}
-    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder, notes: "Parker gives 204 C for silicones in general (2.2.13); PVMQ not named."}
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+      data_quality: literature
+      notes: "Parker 2.2.13: special (low-temperature) silicone compounds down to -115 C; 3.10.2: S0383-70 to -115 C. PVMQ (phenyl silicone) is the low-temperature silicone family; Parker does not use the ASTM name. Verify against the compound datasheet."
+    high_temp_limit_K:
+      value: 477.15
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Parker 2.2.13: silicones up to approximately 204 C (family level; PVMQ not named separately)."
+    thermal_strain:
+      reference_T_K: 297.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: parker_ord5700
+          data_quality: literature
+          notes: >-
+            Parker ORD 5700 Table 2-5 (typical, family level), 'Low-temperature type silicone': contraction 24 -> -54 C
+            0.193 in./ft. and expansion 24 -> 191 C 0.396 in./ft. (divided by 12). Two-point mean
+            values; the curve between the points is PCHIP-interpolated. PVMQ (phenyl silicone) is taken as Parker's low-temperature silicone type.
+          points:
+            - [219.15, -0.016083]
+            - [297.15, 0.0]
+            - [464.15, 0.033]
 
   # ------------------------------------------------------------------ thermoplastics
   - id: ptfe
     name: "PTFE (virgin, tavlanmış)"
     group: thermoplastic
-    hardness_shore_d: {value: null, data_quality: placeholder}
-    high_temp_limit_K: {value: null, data_quality: placeholder}
+    high_temp_limit_K:
+      value: 533.15
+      source: chemours_ptfe_6cx
+      data_quality: vendor
+      notes: "Chemours Teflon PTFE 6C X: service temperature up to 260 C. Thermal strain data end at 423 K, so calculations stop there."
     phase_transition_notes: >-
       First-order crystal transitions at about 20 C (~293 K) and 30 C (~303 K); total length
       change across both about 0.24 % (Kirby 1956). Strained (non-annealed) PTFE can differ by
@@ -282,8 +358,11 @@ materials:
   - id: pctfe
     name: "PCTFE (Kel-F)"
     group: thermoplastic
-    hardness_shore_d: {value: null, data_quality: placeholder}
-    high_temp_limit_K: {value: null, data_quality: placeholder}
+    hardness_shore_d:
+      value: 80
+      source: daikin_pctfe_m300p
+      data_quality: vendor
+      notes: "Daikin NEOFLON PCTFE M-300P datasheet, D80."
     thermal_strain:
       reference_T_K: 293.0
       segments:

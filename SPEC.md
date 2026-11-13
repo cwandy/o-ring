@@ -211,3 +211,7 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
   - 100 psi altında 100 psi değeri kullanılır.
 - **K22 – Kural şiddeti:** `design_rules.yaml` içindeki her sınırın bir `severity` (warn/fail) alanı vardır ve kullanıcı bunu değiştirebilir.
 - **K23 – Kullanıcı girdisi:** `data_quality` listesine `user_input` eklendi. Bu etiket, kullanıcının tek bir tasarım için girdiği değerleri işaretler: termoplastik o-ring sınırları ve yaylı conta katalog ölçüleri/sınırları. Kullanıcıda üretici katalogu yok (2026-11-13). Bu yüzden yaylı conta ve termoplastik sınırlarının varsayılanı boştur; boş bırakılan her sınır "katalog değeri girilmedi" uyarısı verir.
+- **K24 – Malzeme verisi araştırması (K3'ü günceller, kullanıcı isteği 2026-11-13: "placeholder kullanma, araştır bul"):** Tüm conta ve gövde malzemelerinin termal ΔL/L verisi vardır. Kaynaklar `data/references.yaml`, aritmetik `tools/derive_thermal_data.py`, özet `docs/data_provenance.md`. Ölçülmüş verisi olmayan aralıklar şöyle doldurulur:
+  - Kriyojenik PH çelikler ve 116 K altı 7075 için benzer yapılı bir referans eğri oda sıcaklığı katsayısı oranında ölçeklenir (Clark 1968). Bu aralıklar `extrapolated` olarak işaretlenir ve DOĞRULANMALI listesine girer.
+  - Isıl işlem durumu termal eğriyi değiştirmez (aynı kaynak). 17-7 PH Condition A (östenitik) bunun istisnasıdır ve kapsanmaz.
+  - Elastomerlerde kullanılmayan `tg_K`, `tr10_K` ve `hardness_shore_a` yer tutucuları kaldırıldı. Model alanları duruyor; değer girilirse K20'ye göre kullanılır.

@@ -43,12 +43,24 @@ def test_tempers_selectable():
     assert "H900" in tempers and "H1150" in tempers
 
 
-def test_ph_steels_flag_cryo_toughness_without_invented_threshold():
+def test_ph_steels_flag_cryo_toughness_with_sourced_threshold():
+    """Sandia SAND2012-7321: loss of toughness at subzero temperature (qualitative -> 0 C)."""
     for mid in ("ph17_4", "ph15_5", "ph17_7"):
-        tough = DS.housing_materials[mid].cryo_toughness
-        assert tough.warning is True
-        assert tough.threshold_K.value is None
-        assert tough.threshold_K.data_quality is DataQuality.PLACEHOLDER
+        m = DS.housing_materials[mid]
+        assert m.cryo_toughness.warning is True
+        assert m.cryo_toughness.threshold_K.value == 273.15
+        assert m.cryo_toughness.threshold_K.source == "sandia_h2_tech_ref"
+        assert m.hydrogen_embrittlement.data_quality is DataQuality.LITERATURE
+
+
+def test_no_placeholder_material_data():
+    """Material property data are sourced; nothing is left as a placeholder."""
+    for m in [*DS.seal_materials.values(), *DS.housing_materials.values()]:
+        for seg in m.thermal_strain.segments:
+            assert seg.data_quality is not DataQuality.PLACEHOLDER
+        assert m.thermal_strain.segments, m.id
+    for f in DS.fluids.values():
+        assert f.boiling_point_K is None or f.boiling_point_K.data_quality is not DataQuality.PLACEHOLDER
 
 
 def test_fluid_compatibility_defaults_to_unknown():
@@ -102,9 +114,8 @@ def test_verification_list_contents():
     assert {"seal_materials.yaml", "housing_materials.yaml", "fluids.yaml",
             "design_rules.yaml", "extrusion_limits.yaml"} <= files_with_explicit
     locations = {i.location for i in auto}
-    assert "materials[ph17_4].cryo_toughness.threshold_K" in locations
+    assert "materials[ph17_4].thermal_strain.segments[0]" in locations  # Clark-method estimate
     assert "materials[ptfe].thermal_strain.segments[0]" in locations  # extrapolated < 80 K
-    assert "materials[nbr].tg_K" in locations
 
 
 def test_verification_list_output(capsys):

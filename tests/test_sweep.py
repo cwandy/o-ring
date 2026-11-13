@@ -62,23 +62,24 @@ def test_mating_offset():
 
 
 def test_no_data_points_are_kept_and_low_temp_still_fails():
-    """VMQ data ends at 300 K; below 219.15 K the seal FAILs even where geometry exists.
+    """Al 6061 data end at 373.15 K: points above are 'no data'; below 219.15 K the VMQ
+    seal FAILs even where geometry exists.
 
-    PH steel has no thermal data at all: every point except T_ref is 'no data', yet the
-    seal temperature check still runs.
+    Inconel 718 data end at 300 K: the point at 320 K is 'no data', yet the seal temperature
+    check still runs at the cold point.
     """
-    pts = sweep(design(), DS, temperatures(200, 320, 20))
+    pts = sweep(design(), DS, temperatures(200, 400, 20))
     df = to_frame(pts)
-    assert df.loc[df.T_housing_K > 300, "no_data"].notna().all()
-    assert df.loc[df.T_housing_K > 300, "squeeze_min"].isna().all()
-    assert df.loc[df.T_housing_K <= 300, "no_data"].isna().all()
+    hot = df.T_housing_K > 373.15
+    assert df.loc[hot, "no_data"].notna().all()
+    assert df.loc[hot, "squeeze_min"].isna().all()
+    assert df.loc[~hot, "no_data"].isna().all()
     cold = next(p for p in pts if p.T_housing_K == 200)
     assert cold.status is Status.FAIL
 
-    ph = sweep(design(groove_material="ph17_4"), DS, [200.0, 293.15])
-    assert ph[0].state is None and ph[0].no_data
-    assert any(r.code == "temp_low_fail" for r in ph[0].results)
-    assert ph[1].state is not None  # at T_ref no thermal data is needed
+    inc = sweep(design(groove_material="in718"), DS, [200.0, 320.0])
+    assert inc[1].state is None and inc[1].no_data
+    assert any(r.code == "temp_low_fail" for r in inc[0].results)
 
 
 def test_lag_seal_temperature_drives_low_temp_check():
@@ -108,7 +109,7 @@ def test_frame_columns():
 
 
 def test_plots_build():
-    df = to_frame(sweep(design(), DS, temperatures(200, 320, 10)))
+    df = to_frame(sweep(design(), DS, temperatures(200, 400, 10)))  # > 373 K: no data band
     fig = squeeze_fill_figure(df, "degC", squeeze_band=(0.16, 0.23), squeeze_max=0.30,
                               fill_band=(0.6, 0.85), fill_hard_max=0.9,
                               low_temp_limit_K=219.15, low_temp_band_K=8.0)
@@ -118,7 +119,7 @@ def test_plots_build():
     assert any((s.fillcolor or "").startswith("rgba(82, 81, 78, 0.18") for s in fig.layout.shapes)
     assert len(clearance_figure(df, "K", "in").data) == 3
     curves = {k: build_curve(DS.seal_materials[k].thermal_strain, k) for k in ("ptfe", "nbr")}
-    assert len(thermal_strain_figure(curves).data) == 1  # NBR has no data
+    assert len(thermal_strain_figure(curves).data) == 2
 
 
 # --------------------------------------------------------------------------- UI

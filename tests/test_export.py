@@ -102,7 +102,7 @@ def test_report_content(report):
     assert all(png.startswith(b"\x89PNG") for png in report.figures.values())
     refs = {r[0] for r in report.sources}
     assert {"parker_ord5700", "nist_trc_al6061", "nbs_mono29"} <= refs
-    assert any("tg_K" in v for v in report.verify)
+    assert report.verify == []  # VMQ + Al 6061 data are all sourced
     assert len(report.assumptions) == 8
     assert len(report.tolerance_rows) == 5
 
@@ -127,6 +127,7 @@ def test_face_report_and_missing_data():
     rep = build_report(ReportInput(face(), T_min_K=250, T_max_K=290), DS)
     assert "clearance.png" not in rep.figures and rep.tolerance_rows == []
     ph = Design(gland=piston().gland, oring=piston().oring, seal_material="vmq", groove_material="ph17_4")
-    rep = build_report(ReportInput(ph, T_min_K=250, T_max_K=290, T_step_K=20), DS)
-    assert rep.point_rows  # at T_ref no thermal data is needed
+    rep = build_report(ReportInput(ph, T_min_K=150, T_max_K=290, T_step_K=20), DS)
+    assert rep.point_rows
+    assert any("ph17_4" in v for v in rep.verify)  # Clark-method estimate below 200 K is listed
     assert to_pdf(rep).startswith(b"%PDF")

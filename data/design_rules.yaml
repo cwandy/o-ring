@@ -8,7 +8,7 @@ DOGRULANMALI:
   - "squeeze_max %30 Parker'da 'genel maksimum'; Design Chart 4-3 küçük kesitte %32'ye çıkıyor. Bu yüzden WARN seviyesinde tutuldu."
   - "Rod tipi yuvalarda çevresel sıkışma (circumferential_compression_max) için Parker II-IV bölümlerinde değer yok."
   - "stretch_min için sayısal değer yok; negatif stretch (o-ring yuva tabanına oturmuyor) geometrik kontrol olarak uyarılır."
-  - "Termoplastik (PTFE/PCTFE) sayısal limitleri: kaynak belirlenmeli."
+  - "Termoplastik (PTFE/PCTFE) squeeze bandı: Machinery's Handbook 31. baskı katı PTFE değerleri (sayfa doğrudan açılamadı, arama alıntısı) PCTFE için de kullanılıyor. squeeze_max / fill sınırları için kaynak yok (K23: kullanıcı girer; dolum varsayılanı %85)."
 
 common:
   squeeze_min_abs_m:
@@ -105,6 +105,20 @@ rule_sets:
     fill_max: {value: null, data_quality: placeholder, severity: warn}
     fill_hard_max: {value: null, data_quality: placeholder, severity: fail}
     warnings: [split_groove_required, cold_flow, spring_energized_recommended]
+    recommended_squeeze:
+      source: machinerys_handbook_31
+      data_quality: literature
+      notes: >-
+        Machinery's Handbook 31st ed., O-ring section: glands for solid PTFE O-rings often target
+        10-20 % squeeze for cross-sections up to 0.210 in (5.33 mm) and 10-15 % for 0.210-0.275 in;
+        groove width about 10 % larger than the cross-section, clearance gap not above 0.005 in.
+        Applied to PCTFE as well (stiffer than PTFE; no PCTFE-specific source found).
+      bands:
+        - {cs_nominal_in: 0.070, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.103, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.139, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.210, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.275, min: 0.10, max: 0.15}
 
   - material_group: thermoplastic
     gland_type: static_face
@@ -112,3 +126,17 @@ rule_sets:
     fill_max: {value: null, data_quality: placeholder, severity: warn}
     fill_hard_max: {value: null, data_quality: placeholder, severity: fail}
     warnings: [cold_flow, spring_energized_recommended]
+    recommended_squeeze:
+      source: machinerys_handbook_31
+      data_quality: literature
+      notes: >-
+        Machinery's Handbook 31st ed., O-ring section: glands for solid PTFE O-rings often target
+        10-20 % squeeze for cross-sections up to 0.210 in (5.33 mm) and 10-15 % for 0.210-0.275 in;
+        groove width about 10 % larger than the cross-section, clearance gap not above 0.005 in.
+        Applied to PCTFE as well (stiffer than PTFE; no PCTFE-specific source found).
+      bands:
+        - {cs_nominal_in: 0.070, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.103, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.139, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.210, min: 0.10, max: 0.20}
+        - {cs_nominal_in: 0.275, min: 0.10, max: 0.15}

@@ -199,7 +199,7 @@ class Compatibility(_Sourced):
 class Fluid(_Strict):
     id: str
     name: str
-    boiling_point_K: QualifiedValue
+    boiling_point_K: QualifiedValue | None = None  # informational only
     compatibility: dict[str, Compatibility] = Field(default_factory=dict)
 
     def compatibility_with(self, seal_id: str) -> Compatibility:

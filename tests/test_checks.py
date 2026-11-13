@@ -176,7 +176,8 @@ def test_thermoplastic_rule_set_warnings():
 def test_ph_steel_cryo_toughness_warning():
     d = design(groove_material="ph17_4")
     res = check_housing(DS, d, ThermalState(T_housing_K=150.0))
-    assert res[0].code == "cryo_toughness_unknown" and res[0].status is Status.WARN
+    assert res[0].code == "cryo_toughness" and res[0].status is Status.WARN
+    assert res[0].limit == 273.15
     assert check_housing(DS, d, ThermalState()) == []
 
 

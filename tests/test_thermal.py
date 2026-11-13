@@ -25,9 +25,9 @@ WITHOUT_DATA = sorted(mid for mid, c in CURVES.items() if not c.has_data)
 
 
 def test_expected_data_coverage():
-    assert WITH_DATA == sorted(
-        ["vmq", "ptfe", "pctfe", "al6061", "al7075", "al1100", "al3003", "ss304", "ss316", "in718"]
-    )
+    """Every seal and housing material has sourced (or flagged estimated) thermal data."""
+    assert WITH_DATA == sorted(ALL)
+    assert WITHOUT_DATA == []
 
 
 # --------------------------------------------------------------------------- scale = 1 at T_ref
@@ -43,21 +43,24 @@ def test_eps_is_zero_at_293_15(mid):
     assert abs(eps_th(CURVES[mid], REFERENCE_T_K)) < 1e-12
 
 
-@pytest.mark.parametrize("mid", [m for m in WITH_DATA if m != "al7075"])
+@pytest.mark.parametrize("mid", WITH_DATA)
 @pytest.mark.parametrize("T_ref", [150.0, 250.0, 290.0])
 def test_scale_is_one_at_non_default_reference(mid, T_ref):
     """K1: the corrected formula gives exactly 1 at any T_ref, not only 293.15 K."""
     c = CURVES[mid]
+    if not c.T_min_K <= T_ref <= c.T_max_K:
+        pytest.skip("T_ref outside the material's data range")
     assert scale_factor(c, T_ref, T_ref_K=T_ref) == 1.0
     # and the computed path (T slightly off T_ref) is continuous to 1
     assert scale_factor(c, T_ref + 1e-6, T_ref_K=T_ref) == pytest.approx(1.0, abs=1e-9)
 
 
-@pytest.mark.parametrize("mid", [m for m in WITH_DATA if m != "al7075"])
+@pytest.mark.parametrize("mid", WITH_DATA)
 def test_scaling_is_consistent_between_references(mid):
     """L(T1->T2) * L(T2->T1) = 1 and scaling composes."""
     c = CURVES[mid]
-    a, b, d = 80.0, 200.0, 280.0
+    a = max(80.0, c.T_min_K + 1.0)
+    b, d = (a + 280.0) / 2, 280.0
     assert scale_factor(c, a, b) * scale_factor(c, b, a) == pytest.approx(1.0, abs=1e-14)
     assert scale_factor(c, a, b) * scale_factor(c, b, d) == pytest.approx(
         scale_factor(c, a, d), abs=1e-14
@@ -127,11 +130,16 @@ def test_monograph29_values_reproduced(mid, T, contraction_1e5):
     assert eps_th(c, T) == pytest.approx(expected, abs=1e-12)
 
 
-def test_al7075_reference_equivalence():
-    """Table ends at 293 K; 293 K is treated as 293.15 K (documented simplification)."""
+def test_al7075_monograph_value_and_low_temperature_estimate():
+    """Monograph 29 point at 116 K reproduced; below 116 K the scaled 6061 estimate is
+    continuous with it and flagged as extrapolated."""
     c = CURVES["al7075"]
-    assert c.T_max_K == REFERENCE_T_K
-    assert eps_th(c, 116.0) == pytest.approx(-314e-5, abs=1e-12)
+    e_ref = 1.0 / (1.0 + eps_th(c, 293.0)) - 1.0
+    assert eps_th(c, 116.0) == pytest.approx((1 - 314e-5) / (1 + e_ref) - 1, abs=1e-12)
+    assert c.T_min_K == 20.0 and c.T_max_K == pytest.approx(373.15)
+    assert c.quality_at(77.0) is DataQuality.EXTRAPOLATED
+    assert c.quality_at(150.0) is DataQuality.LITERATURE
+    assert abs(eps_th(c, 110.0) - eps_th(c, 116.0)) < 1e-4
 
 
 # --------------------------------------------------------------------------- PTFE transition
@@ -175,7 +183,7 @@ def test_ptfe_rereferenced_from_25C():
 # --------------------------------------------------------------------------- range errors
 
 
-@pytest.mark.parametrize("mid, T", [("ss304", 350.0), ("al7075", 77.0), ("ptfe", 10.0), ("ptfe", 450.0)])
+@pytest.mark.parametrize("mid, T", [("ss304", 600.0), ("al7075", 10.0), ("in718", 350.0), ("ptfe", 10.0), ("ptfe", 450.0)])
 def test_out_of_range_raises_clear_error(mid, T):
     with pytest.raises(OutOfRangeError) as exc:
         eps_th(CURVES[mid], T)
@@ -185,19 +193,18 @@ def test_out_of_range_raises_clear_error(mid, T):
 
 def test_out_of_range_in_array_raises():
     with pytest.raises(OutOfRangeError):
-        eps_th(CURVES["ss304"], np.array([100.0, 200.0, 301.0]))
+        eps_th(CURVES["ss304"], np.array([100.0, 200.0, 601.0]))
 
 
 def test_explicit_extrapolation_is_flagged():
-    c = CURVES["ss304"]
+    c = CURVES["in718"]
     value, quality = scale_factor_with_quality(c, 320.0, allow_extrapolation=True)
     assert value > 1.0
     assert quality is DataQuality.EXTRAPOLATED
 
 
-@pytest.mark.parametrize("mid", WITHOUT_DATA)
-def test_material_without_data(mid):
-    c = CURVES[mid]
+def test_material_without_data():
+    c = build_curve(ThermalStrainData(reference_T_K=293.15, segments=[]), "empty")
     assert scale_factor_with_quality(c, REFERENCE_T_K) == (1.0, None)
     assert scale_factor_with_quality(c, 250.0, T_ref_K=250.0) == (1.0, None)
     with pytest.raises(NoThermalDataError):

@@ -60,9 +60,10 @@ def test_per_temperature_table():
 # --------------------------------------------------------------------------- materials and limits
 
 
-def test_thermoplastic_needs_target_squeeze():
-    with pytest.raises(ValueError):
-        calc(seal_material="pctfe", cs_m=1.78e-3)
+def test_thermoplastic_squeeze_band_and_override():
+    """Machinery's Handbook solid-PTFE band (10-20 % up to .210 in) is the default."""
+    assert calc(seal_material="pctfe", cs_m=1.78e-3).target == (0.10, 0.20)
+    assert calc(seal_material="ptfe", cs_m=0.275 * IN).target == (0.10, 0.15)
     r = calc(seal_material="pctfe", cs_m=1.78e-3, T_min_K=93, T_max_K=300, target_squeeze=(0.08, 0.16))
     assert r.target == (0.08, 0.16)
     assert r.per_temperature.volume_change.iloc[0] < -0.02  # PCTFE shrinks ~1 % linear by 93 K
@@ -70,10 +71,12 @@ def test_thermoplastic_needs_target_squeeze():
 
 def test_temperature_outside_data():
     with pytest.raises(TemperatureRangeError) as e:
-        calc(T_min_K=220, T_max_K=330)
-    assert e.value.usable == (20.0, 300.0)
-    assert usable_range(DS, "nbr", "ss304") is None
-    calc(seal_material="nbr")  # at T_ref only: works without thermal data
+        calc(T_min_K=220, T_max_K=500)
+    assert e.value.usable == pytest.approx((20.0, 464.15))
+    assert usable_range(DS, "nbr", "ss304") == pytest.approx((219.15, 464.15))
+    assert usable_range(DS, "nbr", "in718") == pytest.approx((219.15, 300.0))
+    r = calc(seal_material="nbr", T_min_K=240.0, T_max_K=373.15)
+    assert len(r.per_temperature) >= 2
 
 
 def test_backup_ring_required_at_high_pressure():

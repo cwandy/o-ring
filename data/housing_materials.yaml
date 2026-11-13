@@ -3,21 +3,27 @@
 # nist_poly4 segment: NIST TRC form  y = a + bT + cT^2 + dT^3 + eT^4  for T > T_low_K,
 #                     y = f for T < T_low_K;  y = 1e5 * (L_T - L_293)/L_293  (scale 1e-5).
 # Coefficients are copied verbatim from the cited NIST page.
-# Tables end where the source ends (all metals: <= 300 K). No data above 300 K (user, 2026-11-13).
+# Above room temperature: Bal Seal TR-18 mean coefficients (vendor) to ~100 C; Sandia for 17-4 PH
+# to 568 K. Inconel 718: <= 300 K only (no open source found above).
 
 DOGRULANMALI:
-  - "Tüm metaller: 300 K üstü için kaynaklı veri yok; 300 K üstü hesap 'veri yok' verir."
-  - "17-4 PH, 15-5 PH, 17-7 PH: termal genleşme verisi yok (placeholder); yalnızca T_ref'te hesaplanabilir."
-  - "17-4 PH, 15-5 PH, 17-7 PH: kriyojenik tokluk eşiği (threshold_K) kaynaklı değer bekliyor."
-  - "Hidrojen gevrekleşmesi bayrakları (Inconel 718, PH çelikler): Sandia SAND2012-7321'e karşı doğrulanmalı."
+  - "Metaller 300 K üstü: Bal Seal TR-18 ortalama katsayıları (Al 100 C, PH 93 C, 304 ve 17-7 PH 316 C, 17-4 PH Sandia 295 C). Al 1100/3003 ve SS316 için 6061/304 değeri vekil (extrapolated). Inconel 718: 300 K üstü veri yok."
+  - "17-4 PH, 15-5 PH, 17-7 PH: 200 K altı termal büzülme ölçülmüş açık kaynak yok; NIST Fe-9Ni eğrisinden Clark (1968) yöntemiyle tahmin (extrapolated)."
+  - "17-4 PH, 15-5 PH, 17-7 PH: kriyojenik tokluk uyarısı 0 C altında (Sandia SAND2012-7321: 'sıfırın altında tokluk kaybı', nitel). Isıl işleme özgü Charpy/K1c verisiyle doğrulanmalı."
+  - "Hidrojen gevrekleşmesi bayrakları Sandia SAND2012-7321'e göre (PH çelikler: bölüm 1700/1810; IN718: bölüm 2301 karşılaştırması). 304/316/Al için bayrak yok."
   - "Al 1100: saf alüminyum verisi temsilci olarak kullanıldı (kullanıcı onayı, 2026-11-13)."
-  - "Al 7075-T6: yalnızca 3 nokta (116-200 K) + 293 K; 116 K altı veri yok."
+  - "Al 7075-T6: 116-293 K Monograph 29; 116 K altı 6061 eğrisi ölçeklenerek tahmin (extrapolated)."
   - "NIST 304 ve 316 için aynı katsayıları, 3003-F ve 6061-T6 için aynı katsayıları veriyor."
 
 materials:
   - id: al6061
     name: "Al 6061"
-    tempers: [{id: T6, name: "T6"}]
+    tempers:
+      - {id: O, name: "O (tavlanmış)"}
+      - {id: T4, name: "T4"}
+      - {id: T6, name: "T6"}
+      - {id: T651, name: "T651"}
+      - {id: T6511, name: "T6511"}
     thermal_strain:
       reference_T_K: 293.0
       segments:
@@ -30,13 +36,47 @@ materials:
           fit_error_pct: 4
           source: nist_trc_al6061
           data_quality: measured_reference
-
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: vendor
+          notes: >-
+            Bal Seal TR-18 mean CTE Al 6061 20->100 C 23.6 um/m/C: dL/L = 23.6e-6 * 80 K.
+          points:
+            - [373.15, 0.001888]
   - id: al7075
     name: "Al 7075"
-    tempers: [{id: T6, name: "T6"}]
+    tempers:
+      - {id: O, name: "O (tavlanmış)"}
+      - {id: T6, name: "T6"}
+      - {id: T651, name: "T651"}
+      - {id: T6511, name: "T6511"}
+      - {id: T73, name: "T73"}
+      - {id: T7351, name: "T7351"}
     thermal_strain:
       reference_T_K: 293.0
       segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: nist_trc_al6061
+          data_quality: extrapolated
+          notes: >-
+            ESTIMATE below 116 K: NIST Al 6061 curve scaled by 0.909 so that it meets the NBS
+            Monograph 29 7075-T6 value at 116 K (Clark 1968 method, same alloy family).
+            No measured 7075 data below 116 K found in open sources (tools/derive_thermal_data.py).
+          points:
+            - [20, -0.0037744]
+            - [30, -0.0037639]
+            - [40, -0.0037391]
+            - [50, -0.0037005]
+            - [60, -0.0036487]
+            - [70, -0.0035843]
+            - [80, -0.0035077]
+            - [90, -0.0034195]
+            - [100, -0.0033203]
+            - [110, -0.0032106]
         - kind: table
           quantity: contraction
           scale: 1.0e-5
@@ -48,10 +88,23 @@ materials:
             - [144, 276]
             - [200, 185]
             - [293, 0]
-
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: vendor
+          notes: >-
+            Bal Seal TR-18 mean CTE Al 7075 20->100 C 23.6 um/m/C.
+          points:
+            - [373.15, 0.001888]
   - id: al1100
     name: "Al 1100 (1000 serisi temsilcisi)"
-    tempers: [{id: O, name: "O"}, {id: H14, name: "H14"}]
+    tempers:
+      - {id: O, name: "O (tavlanmış)"}
+      - {id: H12, name: "H12"}
+      - {id: H14, name: "H14"}
+      - {id: H16, name: "H16"}
+      - {id: H18, name: "H18"}
     notes: "Representative of the 1000 series (SPEC §5)."
     thermal_strain:
       reference_T_K: 293.0
@@ -86,10 +139,24 @@ materials:
             - [280, 30]
             - [293, 0]
             - [300, -16]
-
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: extrapolated
+          notes: >-
+            PROXY: Bal Seal value for Al 6061/7075 (23.6 um/m/C, 20->100 C); no 1100 value in the source.
+          points:
+            - [373.15, 0.001888]
   - id: al3003
     name: "Al 3003 (3000 serisi temsilcisi)"
-    tempers: [{id: O, name: "O"}, {id: H14, name: "H14"}, {id: F, name: "F"}]
+    tempers:
+      - {id: O, name: "O (tavlanmış)"}
+      - {id: H12, name: "H12"}
+      - {id: H14, name: "H14"}
+      - {id: H16, name: "H16"}
+      - {id: H18, name: "H18"}
+      - {id: F, name: "F"}
     notes: "Representative of the 3000 series (SPEC §5). NIST data is for 3003-F."
     thermal_strain:
       reference_T_K: 293.0
@@ -103,10 +170,22 @@ materials:
           fit_error_pct: 4
           source: nist_trc_al3003
           data_quality: measured_reference
-
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: extrapolated
+          notes: >-
+            PROXY: Bal Seal value for Al 6061/7075 (23.6 um/m/C, 20->100 C); no 3003 value in the source.
+          points:
+            - [373.15, 0.001888]
   - id: ss304
     name: "SS 304"
-    tempers: [{id: annealed, name: "Tavlanmış"}]
+    tempers:
+      - {id: annealed, name: "Tavlanmış"}
+      - {id: 304L, name: "304L tavlanmış"}
+      - {id: quarter_hard, name: "1/4 sert"}
+      - {id: half_hard, name: "1/2 sert"}
     thermal_strain:
       reference_T_K: 293.0
       segments:
@@ -119,10 +198,23 @@ materials:
           fit_error_pct: 5
           source: nist_trc_ss304
           data_quality: measured_reference
-
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: vendor
+          notes: >-
+            Bal Seal TR-18 Table 4.1 mean CTE from RT, 304 SS: 16.6 um/m/C at 93 C, 16.9 at 205-316 C.
+          points:
+            - [366.15, 0.00119354]
+            - [478.15, 0.00310791]
+            - [589.15, 0.00498381]
   - id: ss316
     name: "SS 316"
-    tempers: [{id: annealed, name: "Tavlanmış"}]
+    tempers:
+      - {id: annealed, name: "Tavlanmış"}
+      - {id: 316L, name: "316L tavlanmış"}
+      - {id: quarter_hard, name: "1/4 sert"}
     thermal_strain:
       reference_T_K: 293.0
       segments:
@@ -135,15 +227,27 @@ materials:
           fit_error_pct: 5
           source: nist_trc_ss316
           data_quality: measured_reference
-
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: extrapolated
+          notes: >-
+            PROXY: Bal Seal 304 SS value (NIST TRC uses one fit for 304 and 316); no 316 value in the source.
+          points:
+            - [366.15, 0.00119354]
+            - [478.15, 0.00310791]
+            - [589.15, 0.00498381]
   - id: in718
     name: "Inconel 718"
-    tempers: [{id: sta, name: "Çözeltiye alma + yaşlandırma"}]
+    tempers:
+      - {id: sa, name: "Çözeltiye alınmış (AMS 5596/5662)"}
+      - {id: sta, name: "Çözeltiye alma + yaşlandırma (AMS 5596/5663)"}
     hydrogen_embrittlement:
       value: true
       source: sandia_h2_tech_ref
-      data_quality: placeholder
-      notes: "Known susceptibility to hydrogen environment embrittlement; condition/threshold to be taken from the source."
+      data_quality: literature
+      notes: "SAND2012-7321 section 2301: with internal hydrogen, IN718 (and IN625) were more affected than A-286 (relative threshold stress intensity). No dedicated IN718 section in the 2012 edition."
     thermal_strain:
       reference_T_K: 293.0
       segments:
@@ -160,41 +264,207 @@ materials:
   - id: ph17_4
     name: "17-4 PH"
     tempers:
+      - {id: A, name: "Condition A (çözeltiye alınmış)"}
       - {id: H900, name: "H900"}
+      - {id: H925, name: "H925"}
       - {id: H1025, name: "H1025"}
       - {id: H1075, name: "H1075"}
+      - {id: H1100, name: "H1100"}
       - {id: H1150, name: "H1150"}
+      - {id: H1150D, name: "H1150-D"}
+      - {id: H1150M, name: "H1150M"}
     cryo_toughness:
       warning: true
-      threshold_K: {value: null, data_quality: placeholder}
-      notes: "Martensitic PH steel: loss of toughness at cryogenic temperature (SPEC §5). Threshold must be sourced per temper."
-    hydrogen_embrittlement: {value: true, source: sandia_h2_tech_ref, data_quality: placeholder}
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+      threshold_K:
+        value: 273.15
+        source: sandia_h2_tech_ref
+        data_quality: literature
+        notes: "SAND2012-7321 section 1810: 'martensitic stainless steels suffer a loss in toughness at low (subzero) temperature'. Qualitative: warning below 0 C; the actual ductile-brittle behaviour depends on temper (H1150 tougher than H900) - verify with Charpy/K1c data for the temper."
+      notes: "Martensitic PH steel: loss of toughness at subzero temperature."
+    hydrogen_embrittlement:
+      value: true
+      source: sandia_h2_tech_ref
+      data_quality: literature
+      notes: "SAND2012-7321 section 1810: Fe-Cr-Ni precipitation-strengthened martensitic stainless steels (17-4 PH, 15-5 PH) are very sensitive to hydrogen-assisted fracture; degradation increases with strength; solution-annealed material appears much less sensitive."
+    thermal_strain:
+      reference_T_K: 293.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: nist_trc_fe9ni
+          data_quality: extrapolated
+          notes: >-
+            NIST Fe-9Ni (martensitic/ferritic) curve, relative to 293.15 K, scaled by 0.980 so that it passes through the Bal Seal -73 C point (Clark 1968 method: total contraction proportional to the RT coefficient). Estimate - no measured cryogenic data found for this alloy (tools/derive_thermal_data.py).
+          points:
+            - [20, -0.0020636]
+            - [30, -0.0020468]
+            - [40, -0.0020222]
+            - [50, -0.0019907]
+            - [60, -0.0019526]
+            - [70, -0.0019087]
+            - [80, -0.0018595]
+            - [90, -0.0018054]
+            - [100, -0.0017468]
+            - [110, -0.0016842]
+            - [120, -0.0016178]
+            - [130, -0.0015481]
+            - [140, -0.0014752]
+            - [150, -0.0013993]
+            - [160, -0.0013207]
+            - [170, -0.0012394]
+            - [180, -0.0011555]
+            - [190, -0.001069]
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: vendor
+          notes: >-
+            Bal Seal TR-18 Table 4.1 mean CTE from RT, 17-4 PH H900: 10.4 um/m/C at -73 C, 10.8 at 0 and 93 C (Condition A 10.8 at 0-93 C). dL/L = alpha * (T - 21.1 C); RT taken as 293.15 K (difference < 1.2e-5).
+          points:
+            - [200.15, -0.00097864]
+            - [273.15, -0.00022788]
+            - [293.15, 0.0]
+            - [366.15, 0.00077652]
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: sandia_sand80_2302
+          data_quality: literature
+          notes: >-
+            Sandia SAND80-2302 Table 2, cast 17-4 PH, 0.194 % at 474 K and 0.313 % at 568 K relative to 298 K, re-referenced to 293.15 K; agrees with wrought data per the report.
+          points:
+            - [474.0, 0.001992]
+            - [568.0, 0.003183]
 
   - id: ph15_5
     name: "15-5 PH"
     tempers:
+      - {id: A, name: "Condition A (çözeltiye alınmış)"}
       - {id: H900, name: "H900"}
+      - {id: H925, name: "H925"}
       - {id: H1025, name: "H1025"}
       - {id: H1075, name: "H1075"}
+      - {id: H1100, name: "H1100"}
       - {id: H1150, name: "H1150"}
+      - {id: H1150M, name: "H1150M"}
     cryo_toughness:
       warning: true
-      threshold_K: {value: null, data_quality: placeholder}
-      notes: "Martensitic PH steel: loss of toughness at cryogenic temperature (SPEC §5). Threshold must be sourced per temper."
-    hydrogen_embrittlement: {value: true, source: sandia_h2_tech_ref, data_quality: placeholder}
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+      threshold_K:
+        value: 273.15
+        source: sandia_h2_tech_ref
+        data_quality: literature
+        notes: "SAND2012-7321 section 1810: 'martensitic stainless steels suffer a loss in toughness at low (subzero) temperature'. Qualitative: warning below 0 C; the actual ductile-brittle behaviour depends on temper (H1150 tougher than H900) - verify with Charpy/K1c data for the temper."
+      notes: "Martensitic PH steel: loss of toughness at subzero temperature."
+    hydrogen_embrittlement:
+      value: true
+      source: sandia_h2_tech_ref
+      data_quality: literature
+      notes: "SAND2012-7321 section 1810: Fe-Cr-Ni precipitation-strengthened martensitic stainless steels (17-4 PH, 15-5 PH) are very sensitive to hydrogen-assisted fracture; degradation increases with strength; solution-annealed material appears much less sensitive."
+    thermal_strain:
+      reference_T_K: 293.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: nist_trc_fe9ni
+          data_quality: extrapolated
+          notes: >-
+            NIST Fe-9Ni (martensitic/ferritic) curve, relative to 293.15 K, scaled by 0.980 so that it passes through the Bal Seal -73 C point (Clark 1968 method: total contraction proportional to the RT coefficient). Estimate - no measured cryogenic data found for this alloy (tools/derive_thermal_data.py).
+          points:
+            - [20, -0.0020636]
+            - [30, -0.0020468]
+            - [40, -0.0020222]
+            - [50, -0.0019907]
+            - [60, -0.0019526]
+            - [70, -0.0019087]
+            - [80, -0.0018595]
+            - [90, -0.0018054]
+            - [100, -0.0017468]
+            - [110, -0.0016842]
+            - [120, -0.0016178]
+            - [130, -0.0015481]
+            - [140, -0.0014752]
+            - [150, -0.0013993]
+            - [160, -0.0013207]
+            - [170, -0.0012394]
+            - [180, -0.0011555]
+            - [190, -0.001069]
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: vendor
+          notes: >-
+            Bal Seal TR-18 Table 4.1 mean CTE from RT, 15-5 PH: 10.4 um/m/C at -73 C, 10.8 at 0 and 93 C.
+          points:
+            - [200.15, -0.00097864]
+            - [273.15, -0.00022788]
+            - [293.15, 0.0]
+            - [366.15, 0.00077652]
 
   - id: ph17_7
     name: "17-7 PH"
     notes: "User wrote '17-5 PH'; no common alloy by that name, interpreted as 17-7 PH (SPEC §1, K8)."
     tempers:
+      - {id: A, name: "Condition A (çözeltiye alınmış)"}
       - {id: TH1050, name: "TH1050"}
       - {id: RH950, name: "RH950"}
       - {id: CH900, name: "CH900"}
     cryo_toughness:
       warning: true
-      threshold_K: {value: null, data_quality: placeholder}
-      notes: "Semi-austenitic PH steel, martensitic after heat treatment. Threshold must be sourced per temper."
-    hydrogen_embrittlement: {value: true, source: sandia_h2_tech_ref, data_quality: placeholder}
-    thermal_strain: {reference_T_K: 293.15, segments: []}
+      threshold_K:
+        value: 273.15
+        source: sandia_h2_tech_ref
+        data_quality: literature
+        notes: "SAND2012-7321 section 1700: 'semi-austenitic stainless steels, however, have low fracture toughness in high strength conditions and at low (subzero) temperature'. Qualitative: warning below 0 C; the actual ductile-brittle behaviour depends on temper (H1150 tougher than H900) - verify with Charpy/K1c data for the temper."
+      notes: "Semi-austenitic PH steel, martensitic after heat treatment."
+    hydrogen_embrittlement:
+      value: true
+      source: sandia_h2_tech_ref
+      data_quality: literature
+      notes: "SAND2012-7321 section 1700: 17-7PH ductility reduced by 95 % in high-pressure hydrogen, among the most severe of any alloy; notched tensile strength extremely degraded, even below 1 atm hydrogen partial pressure."
+    thermal_strain:
+      reference_T_K: 293.15
+      segments:
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: nist_trc_fe9ni
+          data_quality: extrapolated
+          notes: >-
+            NIST Fe-9Ni curve scaled by 0.998 = 17-4 PH scale x 11.0/10.8 (RT coefficient ratio, Clark 1968). Valid for the hardened (martensitic) conditions TH1050 / RH950 / CH900; Condition A is austenitic (Bal Seal 15.3 um/m/C) and is not represented. Estimate.
+          points:
+            - [20, -0.0021018]
+            - [30, -0.0020847]
+            - [40, -0.0020597]
+            - [50, -0.0020275]
+            - [60, -0.0019888]
+            - [70, -0.0019441]
+            - [80, -0.0018939]
+            - [90, -0.0018388]
+            - [100, -0.0017791]
+            - [110, -0.0017154]
+            - [120, -0.0016478]
+            - [130, -0.0015767]
+            - [140, -0.0015025]
+            - [150, -0.0014252]
+            - [160, -0.0013451]
+            - [170, -0.0012623]
+            - [180, -0.0011769]
+            - [190, -0.0010888]
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: balseal_tr18
+          data_quality: vendor
+          notes: >-
+            Bal Seal TR-18 Table 4.1 mean CTE from RT, '17-7 PH Condition H900' row (hardened):
+            11.0 um/m/C at 0 C, 11.5 at 93-316 C.
+          points:
+            - [273.15, -0.0002321]
+            - [293.15, 0.0]
+            - [366.15, 0.00082685]
+            - [478.15, 0.00211485]
+            - [589.15, 0.00339135]
