@@ -10,6 +10,7 @@ hand). :func:`verification_list` merges these with every entry whose ``data_qual
 
 from __future__ import annotations
 
+import csv
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -193,6 +194,18 @@ def verification_list(dataset: Dataset | None = None) -> list[VerificationItem]:
     for key, name in FILES.items():
         for text in ds.raw[key].get(VERIFY_KEY, []) or []:
             items.append(VerificationItem(name, "", str(text), "explicit"))
+    for csv_name in STANDARD_FILES.values():
+        path = ds.data_dir / "standards" / csv_name
+        if not path.is_file():
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for line in lines:
+            if line.startswith("#") and "DOĞRULANMALI" in line:
+                items.append(VerificationItem(f"standards/{csv_name}", "", line.lstrip("# "), "explicit"))
+        for row in csv.DictReader(line for line in lines if not line.startswith("#")):
+            if row.get("notes"):
+                label = row.get("parker_size") or row.get("dash") or ""
+                items.append(VerificationItem(f"standards/{csv_name}", label, row["notes"], "explicit"))
     for key, name in FILES.items():
         found: list[tuple[str, str]] = []
         _scan(ds.raw[key], "", found)
@@ -209,3 +222,37 @@ def format_verification_list(items: list[VerificationItem]) -> str:
     lines += ["", f"placeholder / extrapolated veri ({len(auto)} kayıt):"]
     lines += [f"- {i}" for i in auto]
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- standard sizes
+
+STANDARD_FILES = {"AS568": "as568.csv", "ISO3601-1": "iso3601_1.csv"}
+INCH = 0.0254
+
+
+def load_standard_sizes(data_dir: str | os.PathLike | None = None):
+    """All standard O-ring sizes as one table (SI units).
+
+    Columns: standard ("AS568", "ISO3601-1 A", "ISO3601-1 G"), size, id_m, id_tol_m, cs_m,
+    cs_tol_m, data_quality, notes. AS568 uses the inch columns (primary in the source).
+    """
+    import pandas as pd
+
+    root = resolve_data_dir(data_dir) / "standards"
+    as568 = pd.read_csv(root / STANDARD_FILES["AS568"], comment="#", dtype={"dash": str})
+    a = pd.DataFrame({
+        "standard": "AS568",
+        "size": "AS568-" + as568["dash"],
+        "id_m": as568["id_in"] * INCH, "id_tol_m": as568["id_tol_in"] * INCH,
+        "cs_m": as568["cs_in"] * INCH, "cs_tol_m": as568["cs_tol_in"] * INCH,
+        "data_quality": as568["data_quality"], "notes": as568["notes"].fillna(""),
+    })
+    iso = pd.read_csv(root / STANDARD_FILES["ISO3601-1"], comment="#")
+    b = pd.DataFrame({
+        "standard": "ISO3601-1 " + iso["series"],
+        "size": iso.apply(lambda r: f"{r.d1_mm:g} x {r.d2_mm:.2f} {r.series}", axis=1),
+        "id_m": iso["d1_mm"] * 1e-3, "id_tol_m": iso["d1_tol_mm"] * 1e-3,
+        "cs_m": iso["d2_mm"] * 1e-3, "cs_tol_m": iso["d2_tol_mm"] * 1e-3,
+        "data_quality": iso["data_quality"], "notes": "",
+    })
+    return pd.concat([a, b], ignore_index=True)

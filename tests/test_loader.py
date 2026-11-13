@@ -113,3 +113,10 @@ def test_verification_list_output(capsys):
     assert verify.main([str(DS.data_dir)]) == 0
     out = capsys.readouterr().out
     assert "DOĞRULANMALI" in out and "ph17_4" in out
+
+
+def test_verification_list_includes_standard_tables():
+    items = [i for i in verification_list(DS) if i.file.startswith("standards/")]
+    text = " ".join(str(i) for i in items)
+    assert "as568.csv" in text and "iso3601_1.csv" in text
+    assert "2-201" in text and "2-209" in text

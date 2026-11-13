@@ -50,6 +50,16 @@ rule_sets:
         - {cs_nominal_in: 0.139, min: 0.16, max: 0.23}
         - {cs_nominal_in: 0.210, min: 0.15, max: 0.21}
         - {cs_nominal_in: 0.275, min: 0.15, max: 0.20}
+    gland_dimensions:
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Design Chart 4-2 (p. 4-9): E diametral clearance (reduce max. 50 % for silicone), R groove radius, max. eccentricity (TIR). Inches."
+      rows:
+        - {cs_nominal_in: 0.070, clearance_min_in: 0.002, clearance_max_in: 0.005, radius_min_in: 0.005, radius_max_in: 0.015, eccentricity_max_in: 0.002}
+        - {cs_nominal_in: 0.103, clearance_min_in: 0.002, clearance_max_in: 0.005, radius_min_in: 0.005, radius_max_in: 0.015, eccentricity_max_in: 0.002}
+        - {cs_nominal_in: 0.139, clearance_min_in: 0.003, clearance_max_in: 0.006, radius_min_in: 0.010, radius_max_in: 0.025, eccentricity_max_in: 0.003}
+        - {cs_nominal_in: 0.210, clearance_min_in: 0.003, clearance_max_in: 0.006, radius_min_in: 0.020, radius_max_in: 0.035, eccentricity_max_in: 0.004}
+        - {cs_nominal_in: 0.275, clearance_min_in: 0.004, clearance_max_in: 0.007, radius_min_in: 0.020, radius_max_in: 0.035, eccentricity_max_in: 0.005}
 
   - material_group: elastomer
     gland_type: static_face
@@ -72,6 +82,18 @@ rule_sets:
         - {cs_nominal_in: 0.275, min: 0.21, max: 0.29}
         - {cs_nominal_in: 0.375, min: 0.22, max: 0.28}
         - {cs_nominal_in: 0.500, min: 0.22, max: 0.27}
+    gland_dimensions:
+      source: parker_ord5700
+      data_quality: literature
+      notes: "Design Chart 4-3 (p. 4-18): R groove radius. Inches."
+      rows:
+        - {cs_nominal_in: 0.070, radius_min_in: 0.005, radius_max_in: 0.015}
+        - {cs_nominal_in: 0.103, radius_min_in: 0.005, radius_max_in: 0.015}
+        - {cs_nominal_in: 0.139, radius_min_in: 0.010, radius_max_in: 0.025}
+        - {cs_nominal_in: 0.210, radius_min_in: 0.020, radius_max_in: 0.035}
+        - {cs_nominal_in: 0.275, radius_min_in: 0.020, radius_max_in: 0.035}
+        - {cs_nominal_in: 0.375, radius_min_in: 0.030, radius_max_in: 0.045}
+        - {cs_nominal_in: 0.500, radius_min_in: 0.030, radius_max_in: 0.045}
 
   - material_group: elastomer
     gland_type: dynamic_reciprocating

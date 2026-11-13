@@ -143,16 +143,17 @@ def check_family(result: CheckResult) -> str:
 
 
 def severity_key(result: CheckResult) -> tuple[int, float]:
-    """Ordering key: status first, then how far the value lies past its limit (non-PASS only).
+    """Ordering key: status first, then the distance to the limit.
 
-    Used to report the most severe occurrence of a check, e.g. the largest extrusion gap
-    among several FAIL results.
+    For WARN/FAIL the occurrence furthest past the limit is the most severe (e.g. the largest
+    extrusion gap); for PASS the occurrence closest to its limit (smallest margin).
     """
     rank = {Status.PASS: 0, Status.WARN: 1, Status.FAIL: 2}[result.status]
     excess = 0.0
-    if result.status is not Status.PASS and isinstance(result.value, (int, float)) \
-            and isinstance(result.limit, (int, float)):
-        excess = abs(float(result.value) - float(result.limit))
+    if isinstance(result.value, (int, float)) and isinstance(result.limit, (int, float)):
+        margin = abs(float(result.value) - float(result.limit))
+        # violations: further past the limit is worse; passes: closer to the limit is worse
+        excess = margin if result.status is not Status.PASS else -margin
     return rank, excess
 
 

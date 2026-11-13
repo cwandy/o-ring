@@ -229,6 +229,24 @@ class RecommendedSqueeze(_Sourced):
         return best if abs(best.cs_nominal_in - cs_in) <= tol_in else None
 
 
+class GlandDimensionRow(_Strict):
+    cs_nominal_in: float
+    clearance_min_in: float | None = None
+    clearance_max_in: float | None = None
+    radius_min_in: float | None = None
+    radius_max_in: float | None = None
+    eccentricity_max_in: float | None = None
+
+
+class GlandDimensions(_Sourced):
+    rows: list[GlandDimensionRow]
+
+    def row_for(self, cs_m: float, tol_in: float = 0.005) -> GlandDimensionRow | None:
+        cs_in = cs_m / 0.0254
+        best = min(self.rows, key=lambda r: abs(r.cs_nominal_in - cs_in))
+        return best if abs(best.cs_nominal_in - cs_in) <= tol_in else None
+
+
 class RuleSet(_Strict):
     material_group: Literal["elastomer", "thermoplastic"]
     gland_type: Literal["static_radial", "static_face", "dynamic_reciprocating"]
@@ -242,6 +260,7 @@ class RuleSet(_Strict):
     face_seating_tolerance_rel: RuleLimit | None = None
     face_seating_tolerance_abs_m: RuleLimit | None = None
     recommended_squeeze: RecommendedSqueeze | None = None
+    gland_dimensions: GlandDimensions | None = None
     warnings: list[str] = Field(default_factory=list)
     notes: str | None = None
 
