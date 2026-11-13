@@ -126,7 +126,8 @@ def _allowed_gap(results: tuple[CheckResult, ...]) -> float:
 _FAMILIES = (
     "temp_low", "temp_high", "temp_glassy", "squeeze", "fill", "stretch", "circ_compression",
     "face_internal", "face_external", "backup", "extrusion", "cryo_toughness", "hydrogen",
-    "fluid", "tp_", "thermal_data_quality", "rule_missing",
+    "fluid", "tp_", "thermal_data_quality", "rule_missing", "se_no_contact",
+    "se_compression_min", "se_compression_max", "se_gap", "se_axial", "se_fit",
 )
 
 

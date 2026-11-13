@@ -210,3 +210,4 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
   - Ara sertlikte bir alttaki eğri kullanılır.
   - 100 psi altında 100 psi değeri kullanılır.
 - **K22 – Kural şiddeti:** `design_rules.yaml` içindeki her sınırın bir `severity` (warn/fail) alanı vardır ve kullanıcı bunu değiştirebilir.
+- **K23 – Kullanıcı girdisi:** `data_quality` listesine `user_input` eklendi. Bu etiket, kullanıcının tek bir tasarım için girdiği değerleri işaretler: termoplastik o-ring sınırları ve yaylı conta katalog ölçüleri/sınırları. Kullanıcıda üretici katalogu yok (2026-11-13). Bu yüzden yaylı conta ve termoplastik sınırlarının varsayılanı boştur; boş bırakılan her sınır "katalog değeri girilmedi" uyarısı verir.

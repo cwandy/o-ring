@@ -245,3 +245,35 @@ def mc_histogram(
     fig.update_layout(legend=dict(orientation="h", yanchor="top", y=-0.28, xanchor="left", x=0),
                       margin=dict(t=50, b=120))
     return fig
+
+
+def se_figure(df: pd.DataFrame, temp_unit: str = "K", length_unit: str = "mm",
+              compression_limits: tuple[float | None, float | None] = (None, None),
+              gap_max: float | None = None) -> go.Figure:
+    """Spring-energized seal: compression (wide / tight side) and gaps vs housing temperature."""
+    x = temp_from_K(df["T_housing_K"], temp_unit)
+    k = LENGTH_SCALE[length_unit]
+    fmt = ".3f" if length_unit == "mm" else ".4f"
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
+                        subplot_titles=(t("plots.se_compression"), t("plots.se_gaps")))
+    lo, hi = compression_limits
+    if lo is not None and hi is not None:
+        fig.add_hrect(exclude_empty_subplots=False, y0=lo * k, y1=hi * k, fillcolor=BAND,
+                      line_width=0, layer="below", row=1, col=1)
+    for v in (lo, hi):
+        if v is not None:
+            fig.add_hline(exclude_empty_subplots=False, y=v * k,
+                          line=dict(color=TEXT_2, width=1, dash="dash"), row=1, col=1)
+    _line(x, df["compression_max_m"] * k, t("plots.se_comp_max"), SERIES[1], fig=fig, row=1, col=1, fmt=fmt)
+    _line(x, df["compression_min_m"] * k, t("plots.se_comp_min"), SERIES[0], fig=fig, row=1, col=1, fmt=fmt)
+    if df["max_extrusion_gap_m"].notna().any():
+        _line(x, df["max_extrusion_gap_m"] * k, t("plots.max_gap"), SERIES[2], fig=fig, row=2, col=1, fmt=fmt)
+        if gap_max is not None:
+            fig.add_hline(exclude_empty_subplots=False, y=gap_max * k,
+                          line=dict(color=TEXT_2, width=1, dash="dash"), row=2, col=1)
+    _line(x, df["axial_clearance_m"] * k, t("plots.se_axial"), SERIES[6], fig=fig, row=2, col=1, fmt=fmt)
+    _shade_no_data(fig, np.asarray(x), df["compression_min_m"].isna().to_numpy(), rows=(1, 2))
+    fig.update_yaxes(title_text=f"[{length_unit}]", row=1, col=1)
+    fig.update_yaxes(title_text=f"[{length_unit}]", rangemode="tozero", row=2, col=1)
+    fig.update_xaxes(title_text=f"{t('plots.T_housing')} [{TEMP_UNIT_LABEL[temp_unit]}]", row=2, col=1)
+    return _layout(fig, 560)

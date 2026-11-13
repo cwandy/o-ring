@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common
 from common import (data_banner, dataset, result_rows, section_view, sidebar_units, status_label,
                     status_table)
 from design_form import UnitInputs, design_form
-from oring_designer.checks import Design, overall_status, run_checks
+from oring_designer.checks import Design, overall_status, run_checks, with_rule_overrides
 from oring_designer.geometry import GeometryError
 from oring_designer.gland_types import ThermalState
 from oring_designer.i18n import render_check, t
@@ -32,6 +32,20 @@ T_ref = temperature(t("ui.T_ref"), 293.15, "T_ref", container=st.sidebar)
 form = design_form(ds, ui)
 design, kind, mating_delta = form.design, form.kind, form.mating_delta_K
 ring_cs = design.oring.cs_m
+gland_type = "static_face" if kind == "face" else "static_radial"
+
+# thermoplastic O-ring limits have no source: optional user input (K23)
+overrides: tuple = ()
+if ds.seal_materials[design.seal_material].group == "thermoplastic":
+    with st.expander(t("ui.tp_limits")):
+        vals = {}
+        for name, label in (("squeeze_max", "ui.out_squeeze_max"), ("fill_max", "ui.fill_max_label"),
+                            ("fill_hard_max", "ui.fill_hard_max_label"), ("stretch_max", "ui.out_stretch")):
+            if st.checkbox(f"{t(label)} — {t('ui.enter_limit')}", key=f"tp_{name}"):
+                vals[name] = st.number_input(t(label), value=0.0, min_value=0.0, max_value=1.0,
+                                             step=0.01, format="%.3f", key=f"tpv_{name}")
+        overrides = tuple(sorted(vals.items()))
+    ds = with_rule_overrides(ds, "thermoplastic", gland_type, dict(overrides))
 
 # --------------------------------------------------------------------------- operating point
 st.divider()
@@ -79,15 +93,18 @@ with s4:
 
 @st.cache_data(show_spinner=False)
 def run_sweep(design: Design, T_min: float, T_max: float, step: float, mode: str, delta: float,
-              mating_delta: float, T_ref: float):
-    pts = sweep(design, dataset(), temperatures(T_min, T_max, max(step, 0.1)), mode, delta,
+              mating_delta: float, T_ref: float, overrides: tuple, gland_type: str):
+    ds_ = dataset()
+    if overrides:
+        ds_ = with_rule_overrides(ds_, "thermoplastic", gland_type, dict(overrides))
+    pts = sweep(design, ds_, temperatures(T_min, T_max, max(step, 0.1)), mode, delta,
                 mating_delta, T_ref)
     return pts, to_frame(pts)
 
 
 try:
     points, df = run_sweep(design, min(T_min, T_max), max(T_min, T_max), step, mode, delta,
-                           mating_delta, T_ref)
+                           mating_delta, T_ref, overrides, gland_type)
 except (GeometryError, ValueError) as exc:
     st.error(t("ui.invalid_input", error=exc))
     st.stop()

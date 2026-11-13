@@ -401,3 +401,29 @@ def overall_status(results: list[CheckResult]) -> Status:
     if any(r.status is Status.WARN for r in results):
         return Status.WARN
     return Status.PASS
+
+
+def with_rule_overrides(ds: Dataset, material_group: str, gland_type: str,
+                        values: dict[str, float | None]) -> Dataset:
+    """Copy of ``ds`` with some limits of one rule set replaced by user-entered values.
+
+    Used for thermoplastic O-ring limits that have no source (K23). Values are marked
+    ``user_input``; ``None`` leaves the existing limit unchanged. The severity of the
+    original limit is kept.
+    """
+    from dataclasses import replace as dc_replace
+
+    new_sets = []
+    for rs in ds.rule_sets:
+        if rs.material_group == material_group and rs.gland_type == gland_type:
+            upd = {}
+            for name, value in values.items():
+                if value is None:
+                    continue
+                old = getattr(rs, name)
+                severity = old.severity if old is not None else "warn"
+                upd[name] = RuleLimit(value=value, source=None, data_quality=DataQuality.USER_INPUT,
+                                      severity=severity, notes="user input")
+            rs = rs.model_copy(update=upd)
+        new_sets.append(rs)
+    return dc_replace(ds, rule_sets=new_sets, _curves=ds._curves)

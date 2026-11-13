@@ -18,6 +18,7 @@ class DataQuality(str, Enum):
     LITERATURE = "literature"
     VENDOR = "vendor"
     USER_MEASURED = "user_measured"
+    USER_INPUT = "user_input"  # value entered by the user for one design (e.g. catalog data)
     EXTRAPOLATED = "extrapolated"
     PLACEHOLDER = "placeholder"
 
@@ -33,6 +34,7 @@ _QUALITY_RANK = {
     DataQuality.LITERATURE: 1,
     DataQuality.VENDOR: 1,
     DataQuality.USER_MEASURED: 1,
+    DataQuality.USER_INPUT: 1,
     DataQuality.EXTRAPOLATED: 2,
     DataQuality.PLACEHOLDER: 3,
 }
@@ -68,7 +70,10 @@ class QualifiedValue(_Sourced):
 
     @model_validator(mode="after")
     def _non_placeholder_needs_value_and_source(self) -> QualifiedValue:
-        if self.data_quality is not DataQuality.PLACEHOLDER:
+        if self.data_quality is DataQuality.USER_INPUT:
+            if self.value is None:
+                raise ValueError("user_input requires a 'value'")
+        elif self.data_quality is not DataQuality.PLACEHOLDER:
             if self.value is None or self.source is None:
                 raise ValueError("non-placeholder value requires both 'value' and 'source'")
         return self
