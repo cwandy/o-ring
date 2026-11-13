@@ -10,11 +10,12 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import data_banner, dataset, sidebar_units, status_label, status_table
+from common import data_banner, dataset, section_view, sidebar_units, status_label, status_table
 from design_form import UnitInputs
 from oring_designer import units
 from oring_designer.i18n import render_check, t
 from oring_designer.selector import SelectorInput, select
+from oring_designer.gland_types import ThermalState
 from oring_designer.sweep import sweep, temperatures, to_frame
 from oring_designer.viz.plots import squeeze_fill_figure
 
@@ -196,3 +197,8 @@ fig = squeeze_fill_figure(
     low_temp_band_K=ds.common_rules.low_temp_warning_band_K.value,
 )
 st.plotly_chart(fig, use_container_width=True, theme=None)
+
+st.subheader(t("ui.section"))
+section_view(p.design, ds, [(ui.fmt_T(T), ThermalState(T, T, None, T_ref))
+                            for T in (inp.T_min_K, T_ref, inp.T_max_K)],
+             kind, ui.L_UNIT, key="section_side_size")

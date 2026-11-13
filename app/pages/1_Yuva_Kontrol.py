@@ -9,7 +9,8 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import data_banner, dataset, result_rows, sidebar_units, status_label, status_table
+from common import (data_banner, dataset, result_rows, section_view, sidebar_units, status_label,
+                    status_table)
 from design_form import UnitInputs, design_form
 from oring_designer.checks import Design, overall_status, run_checks
 from oring_designer.geometry import GeometryError
@@ -117,5 +118,13 @@ fig = squeeze_fill_figure(
 st.plotly_chart(fig, use_container_width=True, theme=None)
 if kind != "face":
     st.plotly_chart(clearance_figure(df, T_UNIT, L_UNIT), use_container_width=True, theme=None)
+st.subheader(t("ui.section"))
+T_lo, T_hi = min(T_min, T_max), max(T_min, T_max)
+section_states = [
+    (f"{fmt_T(T)}" + ("" if mode == "equilibrium" else f" / {fmt_T(T + delta)}"),
+     ThermalState(T + delta, T, T + mating_delta, T_ref))
+    for T in (T_lo, T_ref, T_hi)
+]
+section_view(design, ds, section_states, kind, L_UNIT, key="section_side_check")
 with st.expander(t("ui.data_table")):
     st.dataframe(df, use_container_width=True)

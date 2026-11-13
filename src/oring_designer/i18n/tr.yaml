@@ -81,6 +81,23 @@ plots:
   allowed_gap: "İzin verilen aralık (Parker Şekil 3-2)"
   count: "Örnek sayısı"
   monte_carlo: "Monte Carlo"
+  section_title: "Kesit (gerçek ölçek)"
+  section_note: "Sıkışmış o-ring şekli alanı koruyan yuvarlatılmış dikdörtgen (stadyum) yaklaşımıdır."
+  groove_part: "Yuva parçası"
+  mating_part: "Karşı parça"
+  free_ring: "Serbest o-ring"
+  compressed_ring: "Sıkışmış o-ring (yaklaşık)"
+  overfilled: "yuvaya sığmıyor"
+  no_contact: "temas yok"
+  dim_L: "L"
+  dim_W: "G"
+  dim_cs: "Ø"
+  dim_gap: "boşluk"
+  label_squeeze: "squeeze"
+  label_fill: "doluluk"
+  side_nominal: "nominal (konsantrik)"
+  side_tight: "dar taraf"
+  side_wide: "geniş taraf"
   strain_title: "Termal büzülme ΔL/L (293.15 K referanslı)"
 
 ui:
@@ -238,6 +255,8 @@ ui:
   wc_checks: "Worst-case kontrol sonuçları (tüm sıcaklıklar ve tolerans köşeleri)"
   proposal_error: "{size}: hesaplanamadı ({error})"
   only_elastomers: "Ölçü önerisi şimdilik elastomerler içindir (termoplastikler Faz 7)."
+  section: "Kesit görünümü (T_min / T_ref / T_max)"
+  section_side: "Gösterilen konum"
   tol_error: "Tolerans analizi yapılamadı: {error}"
 
 families:

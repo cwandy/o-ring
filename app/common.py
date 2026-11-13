@@ -63,3 +63,26 @@ def result_rows(results: list[CheckResult]) -> list[tuple[Status, str, None]]:
 def data_banner(needs: bool) -> None:
     if needs:
         st.warning(t("ui.data_banner"), icon="⚠️")
+
+
+def section_view(design, ds, states: list[tuple[str, "ThermalState"]], kind: str, length_unit: str,
+                 key: str) -> None:
+    """Scaled cross-section panels for the given thermal states (None where data are missing)."""
+    from oring_designer.checks import run_checks
+    from oring_designer.thermal import ThermalDataError
+    from oring_designer.viz.section import section_figure
+
+    side = "nominal"
+    if kind != "face":
+        side = st.radio(t("ui.section_side"), ["nominal", "tight", "wide"], horizontal=True,
+                        format_func=lambda k: t(f"plots.side_{k}"), key=key)
+    panels = []
+    for label, state in states:
+        try:
+            panels.append((label, run_checks(design, ds, state)[0]))
+        except ThermalDataError:
+            panels.append((label, None))
+    gl = design.gland
+    fig = section_figure(panels, kind, side, length_unit,
+                         getattr(gl, "pressure_direction", "internal"), gl.corner_radius_m)
+    st.plotly_chart(fig, use_container_width=True, theme=None)
