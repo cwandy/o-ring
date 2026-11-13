@@ -86,3 +86,25 @@ def section_view(design, ds, states: list[tuple[str, "ThermalState"]], kind: str
     fig = section_figure(panels, kind, side, length_unit,
                          getattr(gl, "pressure_direction", "internal"), gl.corner_radius_m)
     st.plotly_chart(fig, use_container_width=True, theme=None)
+
+
+def outputs_section(report_input, design, length_unit: str, key: str, label: str = "") -> None:
+    """DXF download and on-demand report (PDF / Markdown ZIP) for ``design``."""
+    from oring_designer.export.dxf import gland_profile, to_bytes
+    from oring_designer.export.report import build_report, to_markdown_zip, to_pdf
+
+    st.subheader(t("ui.outputs"))
+    c1, c2, c3 = st.columns(3)
+    c1.download_button(t("ui.download_dxf"), to_bytes(gland_profile(design, length_unit, label)),
+                       file_name="yuva_profili.dxf", mime="application/dxf", key=f"dxf_{key}")
+    state_key = f"report_{key}"
+    if c2.button(t("ui.build_report"), key=f"btn_{key}"):
+        with st.spinner(t("ui.report_building")):
+            rep = build_report(report_input, dataset())
+            st.session_state[state_key] = (report_input, to_pdf(rep), to_markdown_zip(rep))
+    cached = st.session_state.get(state_key)
+    if cached and cached[0] == report_input:
+        c2.download_button(t("ui.download_pdf"), cached[1], file_name="o_ring_rapor.pdf",
+                           mime="application/pdf", key=f"pdf_{key}")
+        c3.download_button(t("ui.download_md"), cached[2], file_name="o_ring_rapor.zip",
+                           mime="application/zip", key=f"md_{key}")

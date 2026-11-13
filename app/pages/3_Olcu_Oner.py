@@ -10,7 +10,9 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import data_banner, dataset, section_view, sidebar_units, status_label, status_table
+from common import (data_banner, dataset, outputs_section, section_view, sidebar_units, status_label,
+                    status_table)
+from oring_designer.export.report import ReportInput
 from design_form import UnitInputs
 from oring_designer import units
 from oring_designer.i18n import render_check, t
@@ -202,3 +204,9 @@ st.subheader(t("ui.section"))
 section_view(p.design, ds, [(ui.fmt_T(T), ThermalState(T, T, None, T_ref))
                             for T in (inp.T_min_K, T_ref, inp.T_max_K)],
              kind, ui.L_UNIT, key="section_side_size")
+
+outputs_section(
+    ReportInput(p.design, T_ref, None, inp.T_min_K, inp.T_max_K,
+                max((inp.T_max_K - inp.T_min_K) / 40, 0.5), "equilibrium", 0.0, 0.0, ui.L_UNIT, ui.T_UNIT,
+                ui.P_UNIT, oring_label=p.size, tolerances=p.tolerances, mc_samples=5000),
+    p.design, ui.L_UNIT, key=f"size_{choice}", label=p.size)

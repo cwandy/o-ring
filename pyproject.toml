@@ -18,6 +18,8 @@ dependencies = [
     "plotly",
     "matplotlib",
     "streamlit",
+    "reportlab>=5.1.0",
+    "ezdxf>=1.4.5",
 ]
 
 [dependency-groups]

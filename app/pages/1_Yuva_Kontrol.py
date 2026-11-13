@@ -9,8 +9,9 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import (data_banner, dataset, result_rows, section_view, sidebar_units, status_label,
-                    status_table)
+from common import (data_banner, dataset, outputs_section, result_rows, section_view, sidebar_units,
+                    status_label, status_table)
+from oring_designer.export.report import ReportInput
 from design_form import UnitInputs, design_form
 from oring_designer.checks import Design, overall_status, run_checks, with_rule_overrides
 from oring_designer.geometry import GeometryError
@@ -145,3 +146,8 @@ section_states = [
 section_view(design, ds, section_states, kind, L_UNIT, key="section_side_check")
 with st.expander(t("ui.data_table")):
     st.dataframe(df, use_container_width=True)
+
+outputs_section(
+    ReportInput(design, T_ref, state, min(T_min, T_max), max(T_min, T_max), step, mode, delta,
+                mating_delta, L_UNIT, T_UNIT, ui.P_UNIT),
+    design, L_UNIT, key="check")

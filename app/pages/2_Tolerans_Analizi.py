@@ -10,7 +10,8 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import data_banner, dataset, sidebar_units, status_label, status_table
+from common import data_banner, dataset, outputs_section, sidebar_units, status_label, status_table
+from oring_designer.export.report import ReportInput
 from design_form import UnitInputs, design_form
 from oring_designer.checks import Design, allowed_extrusion_gap_m
 from oring_designer.geometry import GeometryError
@@ -202,3 +203,9 @@ with st.expander(t("ui.sensitivities")):
     st.dataframe(sens.style.format("{:.4g}"), use_container_width=True)
 with st.expander(t("ui.mc_table")):
     st.dataframe(mc.samples.head(2000), use_container_width=True)
+
+outputs_section(
+    ReportInput(design, T_ref, state, min(s.T_housing_K for s in states), max(s.T_housing_K for s in states),
+                5.0, "equilibrium", 0.0, form.mating_delta_K, ui.L_UNIT, ui.T_UNIT, ui.P_UNIT,
+                tolerances=tols, mc_samples=n, mc_distribution=dist, mc_seed=seed),
+    design, ui.L_UNIT, key="tol")

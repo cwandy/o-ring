@@ -17,20 +17,20 @@ DEFAULT_LANG = "tr"
 
 
 @lru_cache(maxsize=None)
-def _load(lang: str) -> dict[str, str]:
+def _load(lang: str) -> dict[str, Any]:
     text = resources.files(__package__).joinpath(f"{lang}.yaml").read_text(encoding="utf-8")
     data = yaml.safe_load(text) or {}
     return _flatten(data)
 
 
-def _flatten(tree: dict[str, Any], prefix: str = "") -> dict[str, str]:
-    flat: dict[str, str] = {}
+def _flatten(tree: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+    flat: dict[str, Any] = {}
     for key, value in tree.items():
         full = f"{prefix}{key}"
         if isinstance(value, dict):
             flat.update(_flatten(value, full + "."))
         else:
-            flat[full] = str(value)
+            flat[full] = value
     return flat
 
 
@@ -39,7 +39,15 @@ def t(key: str, lang: str = DEFAULT_LANG, **params: Any) -> str:
 
     Missing keys raise ``KeyError`` so that untranslated strings are caught by tests.
     """
-    return _load(lang)[key].format(**params)
+    return str(_load(lang)[key]).format(**params)
+
+
+def t_list(key: str, lang: str = DEFAULT_LANG) -> list[str]:
+    """A list of texts (e.g. report assumptions)."""
+    value = _load(lang)[key]
+    if not isinstance(value, list):
+        raise KeyError(f"{key} is not a list")
+    return [str(v) for v in value]
 
 
 def render_check(result: Any, lang: str = DEFAULT_LANG) -> str:
