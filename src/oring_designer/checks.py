@@ -20,7 +20,6 @@ from .gland_types import evaluate as evaluate_gland
 from .geometry import CsReductionMethod
 from .loader import Dataset
 from .models import DataQuality, ExtrusionLimits, RuleLimit, RuleSet, SealMaterial
-from .thermal import build_curve
 
 PSI_TO_PA = 6894.757293168361
 INCH_TO_M = 0.0254
@@ -369,9 +368,9 @@ def run_checks(
     st = evaluate_gland(
         design.gland,
         design.oring,
-        build_curve(seal.thermal_strain, seal.id),
-        build_curve(groove.thermal_strain, groove.id),
-        build_curve(mating.thermal_strain, mating.id),
+        ds.curve(seal.id),
+        ds.curve(groove.id),
+        ds.curve(mating.id),
         state,
         design.cs_method,
         design.swell,

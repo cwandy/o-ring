@@ -84,6 +84,16 @@ class Dataset:
     common_rules: CommonRules
     extrusion_limits: ExtrusionLimits
     raw: dict[str, dict[str, Any]] = field(repr=False)
+    _curves: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    def curve(self, material_id: str):
+        """Thermal strain curve of a seal or housing material (built once, cached)."""
+        if material_id not in self._curves:
+            from .thermal import build_curve
+
+            m = self.seal_materials.get(material_id) or self.housing_materials[material_id]
+            self._curves[material_id] = build_curve(m.thermal_strain, material_id)
+        return self._curves[material_id]
 
     def rule_set(self, material_group: str, gland_type: str) -> RuleSet:
         for rs in self.rule_sets:

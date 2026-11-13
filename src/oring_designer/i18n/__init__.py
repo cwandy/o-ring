@@ -45,3 +45,11 @@ def t(key: str, lang: str = DEFAULT_LANG, **params: Any) -> str:
 def render_check(result: Any, lang: str = DEFAULT_LANG) -> str:
     """Display text for a ``checks.CheckResult`` (code + params)."""
     return t(f"checks.{result.code}", lang, **result.params)
+
+
+def family_label(family: str, lang: str = DEFAULT_LANG) -> str:
+    """Display name of a check family (falls back to the raw family code)."""
+    try:
+        return t(f"families.{family}", lang)
+    except KeyError:
+        return family

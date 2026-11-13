@@ -142,6 +142,20 @@ def check_family(result: CheckResult) -> str:
     return result.code
 
 
+def severity_key(result: CheckResult) -> tuple[int, float]:
+    """Ordering key: status first, then how far the value lies past its limit (non-PASS only).
+
+    Used to report the most severe occurrence of a check, e.g. the largest extrusion gap
+    among several FAIL results.
+    """
+    rank = {Status.PASS: 0, Status.WARN: 1, Status.FAIL: 2}[result.status]
+    excess = 0.0
+    if result.status is not Status.PASS and isinstance(result.value, (int, float)) \
+            and isinstance(result.limit, (int, float)):
+        excess = abs(float(result.value) - float(result.limit))
+    return rank, excess
+
+
 @dataclass(frozen=True)
 class WorstCase:
     family: str
@@ -158,7 +172,7 @@ def worst_by_family(points: list[SweepPoint]) -> list[WorstCase]:
         for r in p.results:
             fam = check_family(r)
             cur = worst.get(fam)
-            if cur is None or rank[r.status] > rank[cur.result.status]:
+            if cur is None or severity_key(r) > severity_key(cur.result):
                 worst[fam] = WorstCase(fam, r, p.T_housing_K, p.T_seal_K)
     return sorted(worst.values(), key=lambda w: -rank[w.result.status])
 

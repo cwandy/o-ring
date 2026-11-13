@@ -200,3 +200,48 @@ def thermal_strain_figure(curves: dict, temp_unit: str = "K") -> go.Figure:
     fig.update_yaxes(title_text="ΔL/L [%]")
     fig.update_xaxes(title_text=f"{t('plots.temperature')} [{TEMP_UNIT_LABEL[temp_unit]}]")
     return _layout(fig, 420)
+
+
+def mc_histogram(
+    values: pd.Series,
+    title: str,
+    limits: list[tuple[float, str]] | None = None,
+    ranges: list[tuple[float, float, str]] | None = None,
+    scale: float = 1.0,
+    fmt: str = ".1%",
+    unit: str = "",
+) -> go.Figure:
+    """Monte Carlo histogram of one output with limit lines (dashed) and comparison ranges.
+
+    ``limits``: (value, label) vertical lines, e.g. allowed limits.
+    ``ranges``: (low, high, label) intervals drawn as dotted lines, e.g. worst-case / RSS.
+    Line styles are explained in the legend (no labels drawn over the bars).
+    """
+    v = values.dropna().to_numpy() * scale
+    fig = go.Figure(go.Histogram(x=v, nbinsx=60, name=t("plots.monte_carlo"),
+                                 marker=dict(color=SERIES[0]),
+                                 marker_line=dict(color=SURFACE, width=1),
+                                 hovertemplate=f"%{{x:{fmt}}}<br>n = %{{y}}<extra></extra>"))
+
+    def legend_entry(name: str, color: str, dash: str) -> None:
+        fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines", name=name,
+                                 line=dict(color=color, width=1.5, dash=dash)))
+
+    seen: set[str] = set()
+    for value, label in limits or []:
+        fig.add_vline(x=value * scale, line=dict(color=TEXT, width=1.5, dash="dash"))
+        if label not in seen:
+            legend_entry(label, TEXT, "dash")
+            seen.add(label)
+    for i, (lo, hi, label) in enumerate(ranges or []):
+        color = SERIES[1 + i]
+        for x in (lo, hi):
+            fig.add_vline(x=x * scale, line=dict(color=color, width=1.5, dash="dot"))
+        legend_entry(label, color, "dot")
+    fig.update_xaxes(tickformat=fmt, title_text=unit)
+    fig.update_yaxes(title_text=t("plots.count"))
+    fig.update_layout(title=dict(text=title), bargap=0.02)
+    _layout(fig, 400)
+    fig.update_layout(legend=dict(orientation="h", yanchor="top", y=-0.28, xanchor="left", x=0),
+                      margin=dict(t=50, b=120))
+    return fig

@@ -20,5 +20,6 @@ st.set_page_config(page_title=t("app.title"), layout="wide")
 nav = st.navigation([
     st.Page(home, title=t("ui.home"), icon="🏠", default=True),
     st.Page(str(PAGES / "1_Yuva_Kontrol.py"), title=t("ui.page_check"), icon="🔧"),
+    st.Page(str(PAGES / "2_Tolerans_Analizi.py"), title=t("ui.page_tolerance"), icon="📐"),
 ])
 nav.run()

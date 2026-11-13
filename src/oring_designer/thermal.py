@@ -48,6 +48,7 @@ result is reported as ``extrapolated``. A material without data (K3) raises
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 
 import numpy as np
 from scipy.interpolate import PchipInterpolator
@@ -155,6 +156,14 @@ class ThermalStrainCurve:
             return worst_quality(below[-1].quality, above[0].quality)
         return DataQuality.EXTRAPOLATED  # outside the data range
 
+    @cached_property
+    def _interp(self) -> PchipInterpolator:
+        return PchipInterpolator(self.T_K, self.eps_values, extrapolate=False)
+
+    @cached_property
+    def _dinterp(self):
+        return self._interp.derivative()
+
     def eps(self, T_K, allow_extrapolation: bool = False):
         """eps(T) relative to 293.15 K. Accepts a scalar or an array."""
         self._require_data()
@@ -167,10 +176,9 @@ class ThermalStrainCurve:
                 f"{self.name}: T = {bad.min() if bad.min() < lo else bad.max():.2f} K veri aralığı "
                 f"dışında [{lo:.2f}, {hi:.2f}] K (outside data range)"
             )
-        interp = PchipInterpolator(self.T_K, self.eps_values, extrapolate=False)
-        result = interp(np.clip(T, lo, hi))
+        result = self._interp(np.clip(T, lo, hi))
         if np.any(outside):
-            d = interp.derivative()
+            d = self._dinterp
             result = np.where(T < lo, self.eps_values[0] + d(lo) * (T - lo), result)
             result = np.where(T > hi, self.eps_values[-1] + d(hi) * (T - hi), result)
         return float(result) if result.ndim == 0 else result
