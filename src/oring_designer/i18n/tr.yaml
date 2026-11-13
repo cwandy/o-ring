@@ -1,0 +1,5 @@
+# Türkçe arayüz metinleri. Anahtarlar İngilizce, değerler Türkçe.
+app:
+  title: "O-Ring / Conta Yuvası Tasarım Programı"
+  hello: "Merhaba! İskelet kurulumu çalışıyor (Faz 0)."
+  version: "Sürüm: {version}"

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "oring-designer"
+version = "0.0.1"
+description = "O-ring / gland design and verification tool with cryogenic focus"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pint",
+    "pydantic>=2",
+    "pyyaml",
+    "pandas",
+    "plotly",
+    "matplotlib",
+    "streamlit",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oring_designer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
