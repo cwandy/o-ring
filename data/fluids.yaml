@@ -1,0 +1,40 @@
+# Fluids and seal-material compatibility (warning purposes only). See SPEC.md §5.
+# compatibility: status = ok | conditional | not_ok | unknown. Missing entries are "unknown".
+# The matrix is to be completed by the user; only well-known cases are pre-filled.
+
+DOGRULANMALI:
+  - "Kriyojen kaynama noktaları NIST WebBook değerleri olarak girildi; WebBook sayfasına karşı teyit edilmedi (erişim yok)."
+  - "Depolanabilir itkilerin (MMH, N2H4, NTO, RP-1) kaynama noktaları: kaynak bekliyor."
+  - "NBR/EPDM - LOX uyumsuzluğu: NASA-STD-6001 / ASTM G63 ile belge ve test koşulu olarak sabitlenmeli."
+
+fluids:
+  - id: lox
+    name: "LOX (sıvı oksijen)"
+    boiling_point_K: {value: 90.19, source: nist_webbook, data_quality: literature, notes: "Normal boiling point at 101.325 kPa."}
+    compatibility:
+      nbr: {status: not_ok, source: nasa_std_6001, data_quality: literature, notes: "Hydrocarbon elastomers are not LOX compatible (ignition hazard). Source document to be pinned."}
+      epdm: {status: not_ok, source: nasa_std_6001, data_quality: literature, notes: "Hydrocarbon elastomers are not LOX compatible (ignition hazard). Source document to be pinned."}
+  - id: ln2
+    name: "LN2 (sıvı azot)"
+    boiling_point_K: {value: 77.36, source: nist_webbook, data_quality: literature, notes: "Normal boiling point at 101.325 kPa."}
+  - id: lh2
+    name: "LH2 (sıvı hidrojen)"
+    boiling_point_K: {value: 20.37, source: nist_webbook, data_quality: literature, notes: "Normal hydrogen at 101.325 kPa; para-hydrogen about 20.27 K."}
+  - id: lch4
+    name: "LCH4 (sıvı metan)"
+    boiling_point_K: {value: 111.67, source: nist_webbook, data_quality: literature, notes: "Normal boiling point at 101.325 kPa."}
+  - id: ghe
+    name: "GHe (helyum gazı)"
+    boiling_point_K: {value: 4.22, source: nist_webbook, data_quality: literature, notes: "He-4 normal boiling point; GHe is used as a gas."}
+  - id: mmh
+    name: "MMH"
+    boiling_point_K: {value: null, data_quality: placeholder}
+  - id: n2h4
+    name: "N2H4 (hidrazin)"
+    boiling_point_K: {value: null, data_quality: placeholder}
+  - id: nto
+    name: "NTO (N2O4)"
+    boiling_point_K: {value: null, data_quality: placeholder}
+  - id: rp1
+    name: "RP-1"
+    boiling_point_K: {value: null, data_quality: placeholder, notes: "Distillation range, not a single boiling point."}

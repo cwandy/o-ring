@@ -1,0 +1,39 @@
+# Design rule limits (user editable). Fractions, not percent (0.15 = 15 %). See SPEC.md §5.
+# Elastomer values to be taken from Parker ORD 5700 (PDF pending) -> placeholders for now.
+# dynamic_reciprocating is a placeholder only (K19).
+
+DOGRULANMALI:
+  - "Tüm elastomer limitleri (squeeze, fill, stretch, çevresel sıkışma): Parker ORD 5700'den alınacak."
+  - "Termoplastik (PTFE/PCTFE) sayısal limitleri: kaynak belirlenmeli."
+
+rule_sets:
+  - material_group: elastomer
+    gland_type: static_radial
+    squeeze_min: {value: null, source: parker_ord5700, data_quality: placeholder}
+    squeeze_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    fill_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    stretch_min: {value: null, source: parker_ord5700, data_quality: placeholder}
+    stretch_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    circumferential_compression_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+  - material_group: elastomer
+    gland_type: static_face
+    squeeze_min: {value: null, source: parker_ord5700, data_quality: placeholder}
+    squeeze_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    fill_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+    stretch_min: {value: null, source: parker_ord5700, data_quality: placeholder}
+    stretch_max: {value: null, source: parker_ord5700, data_quality: placeholder}
+  - material_group: elastomer
+    gland_type: dynamic_reciprocating
+    notes: "Placeholder only; not implemented (K19)."
+  - material_group: thermoplastic
+    gland_type: static_radial
+    squeeze_min: {value: null, data_quality: placeholder}
+    squeeze_max: {value: null, data_quality: placeholder}
+    fill_max: {value: null, data_quality: placeholder}
+    warnings: [split_groove_required, cold_flow, spring_energized_recommended]
+  - material_group: thermoplastic
+    gland_type: static_face
+    squeeze_min: {value: null, data_quality: placeholder}
+    squeeze_max: {value: null, data_quality: placeholder}
+    fill_max: {value: null, data_quality: placeholder}
+    warnings: [cold_flow, spring_energized_recommended]

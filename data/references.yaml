@@ -1,0 +1,49 @@
+# Bibliographic references. Every `source:` field in the data files points to an `id` here.
+# `accessed` = date the document was read for this project; null = cited but not yet read.
+
+references:
+  - id: nist_trc_al6061
+    citation: "NIST Cryogenics Technologies Group, Material Properties: 6061-T6 Aluminum (UNS A96061), linear expansion curve fit."
+    url: "https://trc.nist.gov/cryogenics/materials/6061%20Aluminum/6061_T6Aluminum_rev.htm"
+    accessed: "2026-11-13"
+  - id: nist_trc_al3003
+    citation: "NIST Cryogenics Technologies Group, Material Properties: 3003F Aluminum (UNS A93003), linear expansion curve fit. Underlying data: LNG Materials and Fluids, ed. D. Mann, NBS 1977."
+    url: "https://trc.nist.gov/cryogenics/materials/3003F%20Aluminum/3003FAluminum_rev.htm"
+    accessed: "2026-11-13"
+  - id: nist_trc_ss304
+    citation: "NIST Cryogenics Technologies Group, Material Properties: 304 Stainless (UNS S30400), linear expansion curve fit. Underlying data: NBS Monograph 29; LNG Materials and Fluids, NBS 1977."
+    url: "https://trc.nist.gov/cryogenics/materials/304Stainless/304Stainless_rev.htm"
+    accessed: "2026-11-13"
+  - id: nist_trc_ss316
+    citation: "NIST Cryogenics Technologies Group, Material Properties: 316 Stainless, linear expansion curve fit. Underlying data: NBS Monograph 29; LNG Materials and Fluids, NBS 1977."
+    url: "https://trc.nist.gov/cryogenics/materials/316Stainless/316Stainless_rev.htm"
+    accessed: "2026-11-13"
+  - id: nist_trc_in718
+    citation: "NIST Cryogenics Technologies Group, Material Properties: Inconel 718, linear expansion curve fit. Underlying data: Handbook on Materials for Superconducting Machinery, MCIC Battelle, 1974 (suppl. 1975, 1977), p. 5.1.2-7."
+    url: "https://trc.nist.gov/cryogenics/materials/Iconel%20718/Inconel718_rev.htm"
+    accessed: "2026-11-13"
+  - id: nbs_mono29
+    citation: "Corruccini, R.J. and Gniewek, J.J., Thermal Expansion of Technical Solids at Low Temperatures: A Compilation from the Literature, NBS Monograph 29, National Bureau of Standards, issued May 19, 1961."
+    url: "https://nvlpubs.nist.gov/nistpubs/Legacy/MONO/nbsmonograph29.pdf"
+    accessed: "2026-11-13"
+  - id: kirby1956
+    citation: "Kirby, R.K., Thermal Expansion of Polytetrafluoroethylene (Teflon) from -190 to +300 C, J. Res. NBS 57(2), 91-94, 1956, RP2696. doi:10.6028/jres.057.010"
+    url: "https://nvlpubs.nist.gov/nistpubs/jres/057/jresv57n2p91_A1b.pdf"
+    accessed: "2026-11-13"
+  - id: parker_ord5700
+    citation: "Parker Hannifin, Parker O-Ring Handbook, ORD 5700 (current published edition; edition/year to be recorded when read)."
+    url: null
+    accessed: null
+    notes: "Automated download refused by the publisher site; user to supply the PDF."
+  - id: nist_webbook
+    citation: "NIST Chemistry WebBook, NIST Standard Reference Database 69."
+    url: "https://webbook.nist.gov/chemistry/"
+    accessed: null
+  - id: nasa_std_6001
+    citation: "NASA-STD-6001B, Flammability, Offgassing, and Compatibility Requirements and Test Procedures."
+    url: null
+    accessed: null
+  - id: sandia_h2_tech_ref
+    citation: "San Marchi, C. and Somerday, B.P., Technical Reference for Hydrogen Compatibility of Materials, Sandia National Laboratories, SAND2012-7321."
+    url: null
+    accessed: null

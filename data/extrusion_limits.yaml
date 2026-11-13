@@ -1,0 +1,10 @@
+# Extrusion limits: maximum diametral clearance vs pressure for given hardness (Shore A).
+# Source: Parker ORD 5700 extrusion chart (PDF pending). Which clearance definition the chart
+# uses (diametral / radial, concentric / eccentric) is to be confirmed from the source (B3).
+
+DOGRULANMALI:
+  - "Ekstrüzyon tablosu: Parker ORD 5700 grafiğinden alınacak; boşluk tanımı kaynaktan teyit edilecek."
+
+source: parker_ord5700
+data_quality: placeholder
+curves: []

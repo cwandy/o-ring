@@ -1,0 +1,262 @@
+# Seal materials. See SPEC.md §5 and §13.
+#
+# thermal_strain:
+#   reference_T_K : temperature at which the source's dL/L is zero. The loader re-references
+#                   every table to 293.15 K (see thermal.py).
+#   segments      : one entry per source/quality. kind = table | nist_poly4.
+#     table: quantity = expansion  -> value = (L_T - L_ref)/L_ref
+#            quantity = contraction -> value = (L_ref - L_T)/L_ref   (NBS Monograph 29 convention)
+#            value is multiplied by `scale`.
+#   An empty segment list means "no sourced data" (decision K3): scaling only at T = T_ref.
+#
+# QualifiedValue fields: {value, source (references.yaml id), data_quality, notes}.
+
+DOGRULANMALI:
+  - "Elastomer Tg, TR-10, sertlik ve üst sıcaklık sınırları: Parker ORD 5700'den alınacak (PDF bekleniyor)."
+  - "NBR, EPDM, FKM, FFKM, PVMQ: kaynaklı ΔL/L tablosu yok (K3: boş). Tedarikçi/test verisi gerekli."
+  - "VMQ ΔL/L: tek bir compound (Dow Corning Silastic 160, 77 Shore A2, 1952). Kullanılan compound için doğrulanmalı."
+  - "PTFE 274-383 K: Kirby (1956) Şekil 2'den sayısallaştırıldı, Tablo 2'ye çapalandı (en büyük düzeltme 0.019 %)."
+  - "PTFE ve PCTFE sertlik (Shore D) ve sıcaklık sınırları: kaynak yok."
+
+materials:
+  # ------------------------------------------------------------------ elastomers
+  - id: nbr
+    name: "NBR (nitril)"
+    group: elastomer
+    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  - id: epdm
+    name: "EPDM"
+    group: elastomer
+    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  - id: fkm
+    name: "FKM (florokarbon)"
+    group: elastomer
+    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  - id: ffkm
+    name: "FFKM (perfloroelastomer)"
+    group: elastomer
+    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  - id: vmq
+    name: "VMQ (silikon)"
+    group: elastomer
+    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: table
+          quantity: contraction
+          scale: 1.0e-5
+          source: nbs_mono29
+          data_quality: literature
+          notes: >-
+            NBS Monograph 29, Table 2.4 'Rubber, Silastic 160' (data from Laquer and Head 1952).
+            Dow Corning silicone rubber, hardness 77 Shore A2, cured. Single compound; the
+            monograph notes an uncured 48 Shore A2 sample agreed within its +/-25 % uncertainty.
+            Values below Tg are included as measured (glassy state).
+          points:
+            - [20, 2296]
+            - [40, 2276]
+            - [60, 2231]
+            - [80, 2161]
+            - [100, 2066]
+            - [120, 1951]
+            - [140, 1816]
+            - [160, 1656]
+            - [180, 1466]
+            - [200, 1246]
+            - [220, 996]
+            - [240, 721]
+            - [260, 441]
+            - [273, 256]
+            - [280, 165]
+            - [293, 0]
+            - [300, -119]
+
+  - id: pvmq
+    name: "PVMQ (fenil silikon)"
+    group: elastomer
+    hardness_shore_a: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tg_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    tr10_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    high_temp_limit_K: {value: null, source: parker_ord5700, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  # ------------------------------------------------------------------ thermoplastics
+  - id: ptfe
+    name: "PTFE (virgin, tavlanmış)"
+    group: thermoplastic
+    hardness_shore_d: {value: null, data_quality: placeholder}
+    high_temp_limit_K: {value: null, data_quality: placeholder}
+    phase_transition_notes: >-
+      First-order crystal transitions at about 20 C (~293 K) and 30 C (~303 K); total length
+      change across both about 0.24 % (Kirby 1956). Strained (non-annealed) PTFE can differ by
+      up to ~20 % in expansion (Kirby 1956; NBS Monograph 29 note h).
+    thermal_strain:
+      reference_T_K: 298.15
+      segments:
+        - kind: table
+          quantity: contraction
+          scale: 1.0e-5
+          source: nbs_mono29
+          data_quality: extrapolated
+          notes: >-
+            NBS Monograph 29 Table 2.4 'Teflon' (reference 25 C). Kirby measured down to -190 C;
+            values below 80 K are the monograph's extrapolation guided by Laquer and Head (1952).
+          points:
+            - [20, 2110]
+            - [40, 2060]
+            - [60, 2000]
+        - kind: table
+          quantity: contraction
+          scale: 1.0e-5
+          source: nbs_mono29
+          data_quality: literature
+          notes: "NBS Monograph 29 Table 2.4 'Teflon', from Kirby (1956), annealed sample; reference 25 C."
+          points:
+            - [80, 1930]
+            - [100, 1850]
+            - [120, 1760]
+            - [140, 1660]
+            - [160, 1540]
+            - [180, 1400]
+            - [200, 1240]
+            - [220, 1050]
+            - [240, 855]
+            - [260, 645]
+            - [273, 500]
+        - kind: table
+          quantity: expansion
+          scale: 1.0e-2
+          source: kirby1956
+          data_quality: literature
+          notes: >-
+            Digitized from Kirby (1956) Fig. 2 (sample A, annealed; 600 dpi raster trace). Above 28 C
+            the trace is replaced by a cubic least-squares fit of the 27-110 C trace (rms residual
+            0.003 %; removes marker artefacts), then monotone (isotonic) smoothing. Anchored
+            piecewise-linearly to Table 2 values at 0, 25, 50 and 100 C (corrections -0.0185,
+            -0.0032, -0.0028, -0.0040 %). Values in percent, reference 25 C.
+          points:
+          - [274.15, -0.4923]
+          - [275.15, -0.4766]
+          - [276.15, -0.4621]
+          - [277.15, -0.4537]
+          - [278.15, -0.4412]
+          - [279.15, -0.4283]
+          - [280.15, -0.4149]
+          - [281.15, -0.4016]
+          - [282.15, -0.3865]
+          - [283.15, -0.3778]
+          - [284.15, -0.3699]
+          - [285.15, -0.3508]
+          - [286.15, -0.3316]
+          - [287.15, -0.3145]
+          - [288.15, -0.2985]
+          - [289.15, -0.2779]
+          - [290.15, -0.256]
+          - [291.15, -0.2313]
+          - [292.15, -0.1873]
+          - [293.15, -0.146]
+          - [294.15, -0.0836]
+          - [295.15, -0.05]
+          - [296.15, -0.0284]
+          - [297.15, -0.0132]
+          - [298.15, 0.0]
+          - [299.15, 0.0204]
+          - [300.15, 0.0407]
+          - [301.15, 0.0611]
+          - [302.15, 0.0815]
+          - [303.15, 0.0948]
+          - [304.15, 0.1052]
+          - [305.15, 0.1157]
+          - [306.15, 0.1262]
+          - [307.15, 0.1367]
+          - [308.15, 0.1472]
+          - [309.15, 0.1578]
+          - [310.15, 0.1684]
+          - [311.15, 0.1791]
+          - [312.15, 0.1897]
+          - [313.15, 0.2005]
+          - [314.15, 0.2112]
+          - [315.15, 0.2221]
+          - [316.15, 0.2329]
+          - [317.15, 0.2438]
+          - [318.15, 0.2547]
+          - [323.15, 0.31]
+          - [328.15, 0.3662]
+          - [333.15, 0.4235]
+          - [338.15, 0.482]
+          - [343.15, 0.5417]
+          - [348.15, 0.6028]
+          - [353.15, 0.6653]
+          - [358.15, 0.7292]
+          - [363.15, 0.7946]
+          - [368.15, 0.8615]
+          - [373.15, 0.93]
+          - [378.15, 1.0003]
+          - [383.15, 1.065]
+        - kind: table
+          quantity: expansion
+          scale: 1.0
+          source: kirby1956
+          data_quality: literature
+          notes: "Kirby (1956) Table 2: mean coefficient 135e-6 /C between 25 and 150 C -> 135e-6 * 125."
+          points:
+            - [423.15, 0.016875]
+
+  - id: pctfe
+    name: "PCTFE (Kel-F)"
+    group: thermoplastic
+    hardness_shore_d: {value: null, data_quality: placeholder}
+    high_temp_limit_K: {value: null, data_quality: placeholder}
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: table
+          quantity: contraction
+          scale: 1.0e-5
+          source: nbs_mono29
+          data_quality: literature
+          notes: >-
+            NBS Monograph 29 Table 2.4 'Fluorothene or Kel-F' (Laquer and Head 1952): 5 in rod of
+            Fluorothene (Union Carbide) and 1/16 in sheet of Kel-F (M.W. Kellogg).
+          points:
+            - [20, 1114]
+            - [40, 1070]
+            - [60, 1019]
+            - [80, 962]
+            - [100, 900]
+            - [120, 834]
+            - [140, 763]
+            - [160, 686]
+            - [180, 604]
+            - [200, 517]
+            - [220, 424]
+            - [240, 324]
+            - [260, 214]
+            - [273, 134]
+            - [280, 90]
+            - [293, 0]
+            - [300, -52]

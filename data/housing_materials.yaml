@@ -1,0 +1,200 @@
+# Housing (gland body) metals. See SPEC.md §5 and §13 (K7: selectable tempers, K16: hydrogen).
+#
+# nist_poly4 segment: NIST TRC form  y = a + bT + cT^2 + dT^3 + eT^4  for T > T_low_K,
+#                     y = f for T < T_low_K;  y = 1e5 * (L_T - L_293)/L_293  (scale 1e-5).
+# Coefficients are copied verbatim from the cited NIST page.
+# Tables end where the source ends (all metals: <= 300 K). No data above 300 K (user, 2026-11-13).
+
+DOGRULANMALI:
+  - "Tüm metaller: 300 K üstü için kaynaklı veri yok; 300 K üstü hesap 'veri yok' verir."
+  - "17-4 PH, 15-5 PH, 17-7 PH: termal genleşme verisi yok (placeholder); yalnızca T_ref'te hesaplanabilir."
+  - "17-4 PH, 15-5 PH, 17-7 PH: kriyojenik tokluk eşiği (threshold_K) kaynaklı değer bekliyor."
+  - "Hidrojen gevrekleşmesi bayrakları (Inconel 718, PH çelikler): Sandia SAND2012-7321'e karşı doğrulanmalı."
+  - "Al 1100: saf alüminyum verisi temsilci olarak kullanıldı (kullanıcı onayı, 2026-11-13)."
+  - "Al 7075-T6: yalnızca 3 nokta (116-200 K) + 293 K; 116 K altı veri yok."
+  - "NIST 304 ve 316 için aynı katsayıları, 3003-F ve 6061-T6 için aynı katsayıları veriyor."
+
+materials:
+  - id: al6061
+    name: "Al 6061"
+    tempers: [{id: T6, name: "T6"}]
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: nist_poly4
+          coefficients: {a: -4.1277e+2, b: -3.0389e-1, c: 8.7696e-3, d: -9.9821e-6, e: 0.0}
+          scale: 1.0e-5
+          T_low_K: 18
+          f: -415.45
+          range_K: [4, 300]
+          fit_error_pct: 4
+          source: nist_trc_al6061
+          data_quality: measured_reference
+
+  - id: al7075
+    name: "Al 7075"
+    tempers: [{id: T6, name: "T6"}]
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: table
+          quantity: contraction
+          scale: 1.0e-5
+          source: nbs_mono29
+          data_quality: literature
+          notes: "NBS Monograph 29 Table 3.2 (data from Lucks and Deem 1958), 7075-T6. Only three low-temperature points."
+          points:
+            - [116, 314]
+            - [144, 276]
+            - [200, 185]
+            - [293, 0]
+
+  - id: al1100
+    name: "Al 1100 (1000 serisi temsilcisi)"
+    tempers: [{id: O, name: "O"}, {id: H14, name: "H14"}]
+    notes: "Representative of the 1000 series (SPEC §5)."
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: table
+          quantity: contraction
+          scale: 1.0e-5
+          source: nbs_mono29
+          data_quality: literature
+          notes: >-
+            PROXY: pure aluminium, NBS Monograph 29 Table 2.1 (Altman, Rubin and Johnston 1954).
+            The NIST TRC 1100 page has no expansion fit. Proxy use approved by user 2026-11-13.
+          points:
+            - [20, 415]
+            - [30, 414]
+            - [40, 413]
+            - [50, 410]
+            - [60, 405]
+            - [70, 399]
+            - [80, 391]
+            - [90, 381]
+            - [100, 370]
+            - [120, 343]
+            - [140, 312]
+            - [160, 277]
+            - [180, 240]
+            - [200, 201]
+            - [220, 160]
+            - [240, 118]
+            - [260, 75]
+            - [273, 45]
+            - [280, 30]
+            - [293, 0]
+            - [300, -16]
+
+  - id: al3003
+    name: "Al 3003 (3000 serisi temsilcisi)"
+    tempers: [{id: O, name: "O"}, {id: H14, name: "H14"}, {id: F, name: "F"}]
+    notes: "Representative of the 3000 series (SPEC §5). NIST data is for 3003-F."
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: nist_poly4
+          coefficients: {a: -4.1277e+2, b: -3.0389e-1, c: 8.7696e-3, d: -9.9821e-6, e: 0.0}
+          scale: 1.0e-5
+          T_low_K: 18
+          f: -415.45
+          range_K: [4, 300]
+          fit_error_pct: 4
+          source: nist_trc_al3003
+          data_quality: measured_reference
+
+  - id: ss304
+    name: "SS 304"
+    tempers: [{id: annealed, name: "Tavlanmış"}]
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: nist_poly4
+          coefficients: {a: -2.9554e+2, b: -3.9811e-1, c: 9.2683e-3, d: -2.0261e-5, e: 1.7127e-8}
+          scale: 1.0e-5
+          T_low_K: 23
+          f: -300.04
+          range_K: [4, 300]
+          fit_error_pct: 5
+          source: nist_trc_ss304
+          data_quality: measured_reference
+
+  - id: ss316
+    name: "SS 316"
+    tempers: [{id: annealed, name: "Tavlanmış"}]
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: nist_poly4
+          coefficients: {a: -2.9554e+2, b: -3.9811e-1, c: 9.2683e-3, d: -2.0261e-5, e: 1.7127e-8}
+          scale: 1.0e-5
+          T_low_K: 23
+          f: -300.04
+          range_K: [4, 300]
+          fit_error_pct: 5
+          source: nist_trc_ss316
+          data_quality: measured_reference
+
+  - id: in718
+    name: "Inconel 718"
+    tempers: [{id: sta, name: "Çözeltiye alma + yaşlandırma"}]
+    hydrogen_embrittlement:
+      value: true
+      source: sandia_h2_tech_ref
+      data_quality: placeholder
+      notes: "Known susceptibility to hydrogen environment embrittlement; condition/threshold to be taken from the source."
+    thermal_strain:
+      reference_T_K: 293.0
+      segments:
+        - kind: nist_poly4
+          coefficients: {a: -2.368e+2, b: -2.120e-1, c: 5.497e-3, d: -6.882e-6, e: 0.0}
+          scale: 1.0e-5
+          T_low_K: 20
+          f: -238.87
+          range_K: [4, 300]
+          fit_error_pct: 1.1
+          source: nist_trc_in718
+          data_quality: measured_reference
+
+  - id: ph17_4
+    name: "17-4 PH"
+    tempers:
+      - {id: H900, name: "H900"}
+      - {id: H1025, name: "H1025"}
+      - {id: H1075, name: "H1075"}
+      - {id: H1150, name: "H1150"}
+    cryo_toughness:
+      warning: true
+      threshold_K: {value: null, data_quality: placeholder}
+      notes: "Martensitic PH steel: loss of toughness at cryogenic temperature (SPEC §5). Threshold must be sourced per temper."
+    hydrogen_embrittlement: {value: true, source: sandia_h2_tech_ref, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  - id: ph15_5
+    name: "15-5 PH"
+    tempers:
+      - {id: H900, name: "H900"}
+      - {id: H1025, name: "H1025"}
+      - {id: H1075, name: "H1075"}
+      - {id: H1150, name: "H1150"}
+    cryo_toughness:
+      warning: true
+      threshold_K: {value: null, data_quality: placeholder}
+      notes: "Martensitic PH steel: loss of toughness at cryogenic temperature (SPEC §5). Threshold must be sourced per temper."
+    hydrogen_embrittlement: {value: true, source: sandia_h2_tech_ref, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
+
+  - id: ph17_7
+    name: "17-7 PH"
+    notes: "User wrote '17-5 PH'; no common alloy by that name, interpreted as 17-7 PH (SPEC §1, K8)."
+    tempers:
+      - {id: TH1050, name: "TH1050"}
+      - {id: RH950, name: "RH950"}
+      - {id: CH900, name: "CH900"}
+    cryo_toughness:
+      warning: true
+      threshold_K: {value: null, data_quality: placeholder}
+      notes: "Semi-austenitic PH steel, martensitic after heat treatment. Threshold must be sourced per temper."
+    hydrogen_embrittlement: {value: true, source: sandia_h2_tech_ref, data_quality: placeholder}
+    thermal_strain: {reference_T_K: 293.15, segments: []}
