@@ -40,3 +40,8 @@ def t(key: str, lang: str = DEFAULT_LANG, **params: Any) -> str:
     Missing keys raise ``KeyError`` so that untranslated strings are caught by tests.
     """
     return _load(lang)[key].format(**params)
+
+
+def render_check(result: Any, lang: str = DEFAULT_LANG) -> str:
+    """Display text for a ``checks.CheckResult`` (code + params)."""
+    return t(f"checks.{result.code}", lang, **result.params)
