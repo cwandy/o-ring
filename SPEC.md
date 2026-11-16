@@ -215,3 +215,8 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
   - Kriyojenik PH çelikler ve 116 K altı 7075 için benzer yapılı bir referans eğri oda sıcaklığı katsayısı oranında ölçeklenir (Clark 1968). Bu aralıklar `extrapolated` olarak işaretlenir ve DOĞRULANMALI listesine girer.
   - Isıl işlem durumu termal eğriyi değiştirmez (aynı kaynak). 17-7 PH Condition A (östenitik) bunun istisnasıdır ve kapsanmaz.
   - Elastomerlerde kullanılmayan `tg_K`, `tr10_K` ve `hardness_shore_a` yer tutucuları kaldırıldı. Model alanları duruyor; değer girilirse K20'ye göre kullanılır.
+- **K25 – Masaüstü arayüzü ve ISO 286 toleransları (kullanıcı isteği 2026-11-16):**
+  - Dağıtılan program Streamlit yerine PySide6 (Qt) masaüstü arayüzüdür (`desktop/`). Python'suz, internetsiz, yönetici yetkisiz Windows'ta `O-Ring.exe` ile açılır; tarayıcı kullanmaz. Streamlit sürümü (`app/`) yalnızca geliştirme için kalır; streamlit ve plotly geliştirme bağımlılığıdır.
+  - Tolerans analizi Yuva Kontrol sayfasının bir sekmesidir. Her ölçünün toleransı bir ISO 286 sınıfı (H7, f7, …) ya da elle girilen alt/üst sapmadır.
+  - ISO 286 sapmaları `data/iso286.yaml` (kaynak `miki_jis_b0401`, JIS B 0401-2 = ISO 286-2, 3–500 mm). js/JS = ±IT/2 (ISO 286-1 tanımı). 3 mm altı ve 500 mm üstü elle girilir.
+  - Yuva Kontrol'de köşe radyüsü varsayılanı 0.3 mm'dir. Radyal yuva şemaları dikey eksenle çizilir.

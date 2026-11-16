@@ -15,15 +15,16 @@ dependencies = [
     "pydantic>=2",
     "pyyaml",
     "pandas",
-    "plotly",
     "matplotlib",
-    "streamlit",
     "reportlab>=5.1.0",
     "ezdxf>=1.4.5",
+    "pyside6-essentials>=6.8",
 ]
 
 [dependency-groups]
-dev = ["pytest"]
+# streamlit + plotly: the browser version of the UI (app/), kept for development only;
+# the Windows package ships the desktop UI (desktop/, PySide6).
+dev = ["pytest", "streamlit", "plotly"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/oring_designer"]

@@ -16,27 +16,10 @@ from plotly.subplots import make_subplots
 
 from ..i18n import t
 
-SERIES = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948")
-SURFACE = "#fcfcfb"
-TEXT = "#0b0b0b"
-TEXT_2 = "#52514e"
-GRID = "#e6e5e1"
+from .style import GRID, LENGTH_SCALE, SERIES, SURFACE, TEMP_UNIT_LABEL, TEXT, TEXT_2, temp_from_K  # noqa: F401
+
 BAND = "rgba(42, 120, 214, 0.12)"
 NODATA = "rgba(82, 81, 78, 0.18)"
-
-TEMP_UNIT_LABEL = {"K": "K", "degC": "°C", "degF": "°F"}
-LENGTH_SCALE = {"mm": 1e3, "in": 1 / 0.0254}
-
-
-def temp_from_K(T_K, unit: str):
-    T = np.asarray(T_K, dtype=float)
-    if unit == "K":
-        return T
-    if unit == "degC":
-        return T - 273.15
-    if unit == "degF":
-        return (T - 273.15) * 9 / 5 + 32
-    raise ValueError(unit)
 
 
 def _layout(fig: go.Figure, height: int) -> go.Figure:

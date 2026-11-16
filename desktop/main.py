@@ -1,0 +1,128 @@
+"""O-Ring gland design program: desktop (Qt) user interface.
+
+Run:  uv run python desktop/main.py
+Windows package: O-Ring.exe starts python\\pythonw.exe desktop\\main.py (no console, no browser).
+"""
+
+from __future__ import annotations
+
+import sys
+import traceback
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
+for p in (str(HERE), str(ROOT / "src")):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtGui import QFont, QIcon  # noqa: E402
+from PySide6.QtWidgets import (QApplication, QComboBox, QLabel, QMainWindow, QMessageBox, QScrollArea,  # noqa: E402
+                               QTabWidget, QToolBar, QWidget)
+
+from oring_designer.i18n import t  # noqa: E402
+from ui import T_LABEL, UNITS, UnitSpin  # noqa: E402
+
+APP_ICON = HERE / "assets" / "icon.png"
+
+
+def scroll(page: QWidget) -> QScrollArea:
+    area = QScrollArea()
+    area.setWidgetResizable(True)
+    area.setWidget(page)
+    area.setFrameShape(QScrollArea.NoFrame)
+    return area
+
+
+class MainWindow(QMainWindow):
+    def __init__(self) -> None:
+        super().__init__()
+        from page_calc import CalcPage
+        from page_check import CheckPage
+        from page_se import SpringPage
+        from page_size import SizePage
+
+        self.setWindowTitle(t("app.title"))
+        if APP_ICON.exists():
+            self.setWindowIcon(QIcon(str(APP_ICON)))
+        self.resize(1440, 920)
+
+        bar = QToolBar(t("ui.units"))
+        bar.setMovable(False)
+        self.addToolBar(bar)
+        bar.addWidget(QLabel(f"  {t('ui.length_unit')}: "))
+        self.len_box = QComboBox()
+        self.len_box.addItems(["mm", "in"])
+        bar.addWidget(self.len_box)
+        bar.addWidget(QLabel(f"   {t('ui.temp_unit')}: "))
+        self.temp_box = QComboBox()
+        for k, v in T_LABEL.items():
+            self.temp_box.addItem(v, k)
+        bar.addWidget(self.temp_box)
+        bar.addWidget(QLabel(f"   {t('ui.pressure_unit')}: "))
+        self.p_box = QComboBox()
+        self.p_box.addItems(["bar", "MPa", "psi"])
+        bar.addWidget(self.p_box)
+        bar.addWidget(QLabel(f"   {t('ui.T_ref')}: "))
+        self.T_ref = UnitSpin("temp", UNITS.T_ref_K)
+        self.T_ref.setMaximumWidth(130)
+        bar.addWidget(self.T_ref)
+        self.len_box.currentTextChanged.connect(lambda v: UNITS.set(L=v))
+        self.temp_box.currentIndexChanged.connect(lambda *_: UNITS.set(T=self.temp_box.currentData()))
+        self.p_box.currentTextChanged.connect(lambda v: UNITS.set(P=v))
+        self.T_ref.edited.connect(self._t_ref)
+
+        self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)
+        self.pages = [CalcPage(), CheckPage(), SizePage(), SpringPage()]
+        for page, key in zip(self.pages, ("ui.page_calc", "ui.page_check", "ui.page_size", "ui.page_se")):
+            self.tabs.addTab(scroll(page), t(key))
+        self.setCentralWidget(self.tabs)
+        UNITS.changed.connect(self._refresh_all)
+
+    def _t_ref(self) -> None:
+        UNITS.T_ref_K = self.T_ref.si()
+        self._refresh_all()
+
+    def _refresh_all(self) -> None:
+        for p in self.pages:
+            p.schedule()
+
+
+def _excepthook(exc_type, exc, tb):  # keep the window alive and show what happened
+    text = "".join(traceback.format_exception(exc_type, exc, tb))
+    if sys.stderr is not None:
+        sys.stderr.write(text)
+    box = QMessageBox(QMessageBox.Critical, t("app.title"), t("desktop.unexpected", error=exc))
+    box.setDetailedText(text)
+    box.exec()
+
+
+def _log_when_windowless() -> None:
+    """pythonw.exe has no console: send output to %LOCALAPPDATA%\\o-ring\\masaustu.log."""
+    if sys.stderr is not None and sys.stdout is not None:
+        return
+    import os
+    base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "o-ring"
+    base.mkdir(parents=True, exist_ok=True)
+    f = open(base / "masaustu.log", "w", encoding="utf-8", buffering=1)  # noqa: SIM115
+    sys.stdout = sys.stderr = f
+
+
+def main() -> int:
+    _log_when_windowless()
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    app = QApplication(sys.argv)
+    app.setApplicationName("O-Ring")
+    app.setStyle("Fusion")
+    f = QFont("Segoe UI", 10) if sys.platform == "win32" else app.font()
+    app.setFont(f)
+    sys.excepthook = _excepthook
+    win = MainWindow()
+    win.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

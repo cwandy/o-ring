@@ -1,0 +1,316 @@
+"""Yuva Hesaplayıcı: groove depth, width, tolerances, temperature behaviour and forces from
+material, cross-section, temperature range and pressure (desktop version of app/pages/0)."""
+
+from __future__ import annotations
+
+from PySide6.QtWidgets import QComboBox, QGridLayout, QHBoxLayout
+
+from oring_designer.checks import Status, run_checks
+from oring_designer.export.figures import envelope_fig, section_fig
+from oring_designer.force import face_clamp_load, load_per_length
+from oring_designer.gland_types import ThermalState
+from oring_designer.groove_calc import GrooveInput, TemperatureRangeError, calculate
+from oring_designer.i18n import render_check, t, t_list
+from oring_designer.thermal import ThermalDataError
+from ui import (UNITS, Banner, Card, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row,
+                combo, data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
+
+CS_STD = [("AS568", v) for v in (1.78, 2.62, 3.53, 5.33, 6.99)] + [("ISO 3601", v) for v in (1.80, 2.65, 3.55, 5.30, 7.00)]
+
+
+class CalcPage(Page):
+    def __init__(self):
+        super().__init__(t("ui.page_calc"), t("ui.calc_intro"))
+        ds = dataset()
+
+        g = self.group(t("ui.materials"))
+        self.seal = combo([(m.name, k) for k, m in ds.seal_materials.items()], "vmq")
+        self.housing = combo([(m.name, k) for k, m in ds.housing_materials.items()], "ss304")
+        self.temper = QComboBox()
+        add_row(g, t("ui.seal_material"), self.seal)
+        add_row(g, t("ui.housing_material"), self.housing)
+        add_row(g, t("ui.temper"), self.temper)
+        self.housing.currentIndexChanged.connect(self._fill_tempers)
+        self._fill_tempers()
+
+        g = self.group(t("ui.gland"))
+        self.cs_std = combo([(f"{v:.2f} mm ({std})", (std, v)) for std, v in CS_STD] + [(t("ui.cs_custom"), None)])
+        self.cs_std.setCurrentIndex(CS_STD.index(("AS568", 3.53)))
+        self.cs_custom = UnitSpin("length", 2.5e-3)
+        add_row(g, t("ui.cross_section"), self.cs_std)
+        add_row(g, t("ui.cs_custom_value"), self.cs_custom)
+        self.gland = radio_row([("face", t("ui.gland_face")), ("radial", t("ui.gland_radial"))], "face")
+        add_row(g, t("ui.gland_type"), self.gland)
+        self.direction = radio_row([("internal", t("ui.internal")), ("external", t("ui.external"))], "internal")
+        self.dir_row = add_row(g, t("ui.pressure_direction"), self.direction)
+        self.g = g
+
+        g = self.group(t("ui.operating"))
+        self.pressure = UnitSpin("pressure", 50e5)
+        self.T_lo = UnitSpin("temp", 220.0)
+        self.T_hi = UnitSpin("temp", 300.0)
+        self.hardness = UnitSpin("plain", 70.0, plain_range=(50.0, 90.0), decimals=0, step=5.0)
+        add_row(g, t("ui.pressure"), self.pressure)
+        add_row(g, t("ui.T_low"), self.T_lo)
+        add_row(g, t("ui.T_high"), self.T_hi)
+        self.hard_row = add_row(g, t("ui.hardness"), self.hardness)
+        self.op = g
+
+        g = self.group(t("ui.optional_inputs"))
+        self.ring_id = OptionalValue(UnitSpin("length", 30e-3))
+        self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
+        self.tmin = OptionalValue(UnitSpin("plain", 0.15, plain_range=(0.0, 0.9), decimals=3, step=0.01))
+        self.tmax = OptionalValue(UnitSpin("plain", 0.25, plain_range=(0.0, 0.9), decimals=3, step=0.01))
+        self.fill_lim = OptionalValue(UnitSpin("plain", 0.85, plain_range=(0.3, 0.95), decimals=2, step=0.01))
+        self.cs_tol = OptionalValue(UnitSpin("length", 0.08e-3))
+        self.depth_tol = OptionalValue(UnitSpin("length", 0.05e-3))
+        self.width_tol = OptionalValue(UnitSpin("length", 0.10e-3))
+        self.stretch = UnitSpin("plain", 0.0, plain_range=(0.0, 0.05), decimals=3, step=0.005)
+        for label, w in ((t("ui.ring_id_opt"), self.ring_id), (t("ui.fluid"), self.fluid),
+                         (t("ui.target_min"), self.tmin), (t("ui.target_max"), self.tmax),
+                         (t("ui.fill_limit_opt"), self.fill_lim), (t("ui.cs_tol_opt"), self.cs_tol),
+                         (t("ui.depth_tol_opt"), self.depth_tol), (t("ui.width_tol_opt"), self.width_tol)):
+            add_row(g, label, w)
+        self.stretch_row = add_row(g, t("ui.install_stretch_opt"), self.stretch)
+        self.optg = g
+        self.form.addStretch(1)
+
+        self.watch(self.seal, self.housing, self.temper, self.cs_std, self.cs_custom, self.gland, self.direction,
+                   self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.fluid, self.tmin,
+                   self.tmax, self.fill_lim, self.cs_tol, self.depth_tol, self.width_tol, self.stretch)
+
+        # ------------------------------------------------------------------ results
+        r = self.results
+        self.banner = Banner()
+        self.notes = Banner()
+        r.addWidget(self.banner)
+        r.addWidget(self.notes)
+        grid = QGridLayout()
+        self.cards = [Card() for _ in range(8)]
+        for i, c in enumerate(self.cards):
+            grid.addWidget(c, i // 4, i % 4)
+        r.addLayout(grid)
+        self.overall = heading("")
+        r.addWidget(self.overall)
+        r.addWidget(heading(t("ui.section_title_calc")))
+        self.side = radio_row([(k, t(f"plots.side_{k}")) for k in ("nominal", "tight", "wide")], "nominal")
+        self.watch(self.side)
+        r.addWidget(self.side)
+        self.section = PlotHolder()
+        r.addWidget(self.section)
+        r.addWidget(heading(t("ui.force_title")))
+        self.force_table = Table()
+        r.addWidget(self.force_table)
+        fl = QHBoxLayout()
+        self.force_cards = [Card() for _ in range(3)]
+        for c in self.force_cards:
+            fl.addWidget(c)
+        r.addLayout(fl)
+        self.force_note = note()
+        r.addWidget(self.force_note)
+        r.addWidget(heading(t("ui.temp_behaviour")))
+        self.envelope = PlotHolder()
+        r.addWidget(self.envelope)
+        self.temp_table = Table()
+        r.addWidget(self.temp_table)
+        from PySide6.QtWidgets import QPushButton
+
+        self.csv_btn = QPushButton(t("ui.download_csv"))
+        self.csv_btn.clicked.connect(self._save_csv)
+        r.addWidget(self.csv_btn)
+        r.addWidget(heading(t("ui.calc_checks")))
+        self.checks = StatusTable()
+        r.addWidget(self.checks)
+        r.addWidget(heading(t("ui.method")))
+        r.addWidget(note("\n".join(f"• {x}" for x in t_list("ui.method_items"))))
+        self._per_T = None
+        self.schedule()
+
+    def _fill_tempers(self) -> None:
+        h = dataset().housing_materials[self.housing.currentData()]
+        self.temper.blockSignals(True)
+        self.temper.clear()
+        for x in h.tempers:
+            self.temper.addItem(x.name, x.id)
+        self.temper.blockSignals(False)
+
+    def _set_visible(self) -> None:
+        face = self.gland.key() == "face"
+        for w in (self.direction, self.g.itemAtPosition(self.dir_row, 0).widget()):
+            w.setVisible(face)
+        is_el = dataset().seal_materials[self.seal.currentData()].group == "elastomer"
+        for w in (self.hardness, self.op.itemAtPosition(self.hard_row, 0).widget()):
+            w.setVisible(is_el)
+        for w in (self.stretch, self.optg.itemAtPosition(self.stretch_row, 0).widget()):
+            w.setVisible(not face)
+        self.cs_custom.setEnabled(self.cs_std.currentData() is None)
+        self.side.setVisible(not face)
+
+    # ---------------------------------------------------------------------- compute
+    def recompute(self) -> None:
+        self._set_visible()
+        ds = dataset()
+        U = UNITS
+        seal_id, housing_id = self.seal.currentData(), self.housing.currentData()
+        is_el = ds.seal_materials[seal_id].group == "elastomer"
+        gland = self.gland.key()
+        direction = self.direction.key() if gland == "face" else "internal"
+        std = self.cs_std.currentData()
+        cs_m = std[1] * 1e-3 if std else self.cs_custom.si()
+        ring_id, cs_tol = self.ring_id.si(), self.cs_tol.si()
+        sketch = "face" if gland == "face" else "piston"
+        pending = {"depth": "…", "width": "…", "radius": "…", "cs": U.num_L(cs_m, cs_tol), "ring_id": U.num_L(ring_id)}
+        self.schematic.show_gland(sketch, pending, direction)
+
+        tmin, tmax = self.tmin.si(), self.tmax.si()
+        target = (tmin, tmax) if tmin is not None and tmax is not None and tmin < tmax else None
+        rules = ds.rule_set(ds.seal_materials[seal_id].group, "static_face" if gland == "face" else "static_radial")
+        if target is None and rules.recommended_squeeze is None:
+            raise ValueError(t("ui.target_required"))
+        T_ref = U.T_ref_K
+        inp = GrooveInput(
+            seal_material=seal_id, cs_m=cs_m, gland=gland, T_min_K=min(self.T_lo.si(), self.T_hi.si()),
+            T_max_K=max(self.T_lo.si(), self.T_hi.si()), T_ref_K=T_ref, pressure_Pa=self.pressure.si(),
+            hardness_shore_a=self.hardness.si() if is_el else None, housing_material=housing_id,
+            fluid=self.fluid.currentData(), face_direction=direction, cs_tol_m=cs_tol, target_squeeze=target,
+            fill_limit=self.fill_lim.si(), depth_tol_m=self.depth_tol.si(), width_tol_m=self.width_tol.si(),
+            install_stretch=self.stretch.si() if gland == "radial" else 0.0,
+            round_depth_m=0.0001 * 0.0254 if U.L == "in" else 0.01e-3,
+            round_width_m=0.001 * 0.0254 if U.L == "in" else 0.05e-3,
+        )
+        try:
+            res = calculate(inp, ds)
+        except TemperatureRangeError as exc:
+            if exc.usable is None:
+                raise ValueError(t("ui.no_thermal_data")) from None
+            raise ValueError(t("ui.usable_range", lo=U.fmt_T(exc.usable[0]), hi=U.fmt_T(exc.usable[1]))) from None
+
+        worst = [r for r, _ in res.wc.worst_results.values()]
+        self.banner.show_text(data_banner_text(any(r.data_quality is not None and r.data_quality.needs_warning
+                                                   for r in worst), (seal_id, housing_id)), "warn")
+        notes = []
+        for n in res.notes:
+            if n == "backup_ring_required":
+                notes.append(t("ui.backup_required"))
+            elif n == "parker_row_nearest":
+                notes.append(t("ui.parker_nearest"))
+        self.notes.show_text("\n".join(notes), "error" if "backup_ring_required" in res.notes else "info")
+
+        L, Ln = U.fmt_L, U.num_L
+        pr = res.parker_ref
+        sq_lo, sq_hi = res.squeeze_range
+        nom_ref = res.nominal_at(T_ref)
+        c = self.cards
+        c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
+                 t("ui.cap_depth", tol=Ln(res.depth_tol_m), a=Ln(pr["depth_min_m"]), b=Ln(pr["depth_max_m"])))
+        c[1].set(t("ui.kpi_width"), L(res.width_m),
+                 t("ui.cap_width", tol=Ln(res.width_tol_m), gmin=Ln(res.width_min_m), a=Ln(pr["width_min_m"]),
+                   b=Ln(pr["width_max_m"])))
+        c[2].set(t("ui.kpi_squeeze"), f"{sq_lo * 100:.1f}–{sq_hi * 100:.1f} %",
+                 t("ui.cap_squeeze", a=res.target[0], b=res.target[1],
+                   n=(nom_ref.squeeze_min + nom_ref.squeeze_max) / 2, T=U.fmt_T(T_ref)))
+        c[3].set(t("ui.kpi_fill"), f"{res.fill_max:.1%}",
+                 t("ui.cap_fill", lim=res.fill_limit, head=res.fill_limit - res.fill_max))
+        fluid = self.fluid.currentData()
+        if gland == "radial":
+            c[4].set(t("ui.kpi_machine_depth"), L(res.machine_depth_m), t("ui.cap_machine"))
+            c[5].set(t("ui.kpi_clearance"), f"{Ln(res.clearance_m[0])}–{L(res.clearance_m[1])}",
+                     t("ui.cap_clearance", gap=L(res.allowed_gap_m)) if res.allowed_gap_m else
+                     t("ui.cap_clearance_nogap"))
+        else:
+            src = t("ui.cs_tol_user") if cs_tol is not None else (t("ui.cs_tol_std") if res.cs_tol_m > 0 else
+                                                                   t("ui.cs_tol_none"))
+            c[4].set(t("ui.kpi_cs_tol"), f"± {L(res.cs_tol_m)}", t("ui.cap_cs_tol", src=src))
+            gas = fluid in ("ghe",)
+            c[5].set(t("ui.kpi_finish"), "0.4 µm" if gas else "0.8 µm",
+                     t("ui.finish_face_gas") if gas else t("ui.finish_static"))
+        c[6].set(t("ui.kpi_radius"), L(res.radius_m), t("ui.cap_radius", a=Ln(pr["radius_min_m"]),
+                                                          b=Ln(pr["radius_max_m"])))
+        per_T = res.per_temperature
+        lo_row, hi_row = per_T.iloc[0], per_T.iloc[-1]
+        c[7].set(t("ui.kpi_volume"), f"{lo_row.volume_change:+.2%}",
+                 t("ui.cap_volume", Tlo=U.fmt_T(lo_row.T_K), vlo=lo_row.volume_change, Thi=U.fmt_T(hi_row.T_K),
+                   vhi=hi_row.volume_change))
+        self.overall.setText(f"{t('ui.overall')}: {status_text(res.status)}")
+
+        gap_txt = f"{Ln(res.clearance_m[0])}–{Ln(res.clearance_m[1])}" if res.clearance_m else None
+        self.schematic.show_gland(sketch, {
+            "depth": Ln(res.depth_m, res.depth_tol_m), "width": Ln(res.width_m, (0.0, res.width_tol_m)),
+            "radius": Ln(res.radius_m), "cs": Ln(cs_m, res.cs_tol_m), "gap": gap_txt,
+            "machine_depth": Ln(res.machine_depth_m) if gland == "radial" else None,
+            "ring_id": Ln(ring_id)}, direction)
+
+        # section
+        panels = []
+        for T in (inp.T_min_K, T_ref, inp.T_max_K):
+            try:
+                panels.append((U.fmt_T(T), run_checks(res.design, ds, ThermalState(T, T, None, T_ref))[0]))
+            except ThermalDataError:
+                panels.append((U.fmt_T(T), None))
+        side = self.side.key() if gland == "radial" else "nominal"
+        self.section.set_figure(section_fig(panels, sketch, side, U.L, direction, res.radius_m))
+
+        self._forces(res, cs_m, ring_id, sq_hi, nom_ref, direction, gland, is_el)
+
+        rules_hard = rules.fill_hard_max.value if rules.fill_hard_max and rules.fill_hard_max.value else None
+        self.envelope.set_figure(envelope_fig(per_T, U.T, res.target, res.fill_limit, rules_hard))
+        header = [t("ui.col_T"), t("ui.col_cs_T"), t("ui.col_sq_range"), t("ui.col_sq_nom"), t("ui.col_fill_max"),
+                  t("ui.col_dv")] + ([t("ui.col_gap")] if gland == "radial" else [])
+        rows = []
+        for _, row in per_T.iterrows():
+            rows.append([U.fmt_T(row.T_K), L(row.cs_m), f"{row.squeeze_lo:.1%} – {row.squeeze_hi:.1%}",
+                         f"{row.squeeze_nominal:.1%}", f"{row.fill_max:.1%}", f"{row.volume_change:+.2%}"]
+                        + ([L(row.gap_max_m)] if gland == "radial" else []))
+        self.temp_table.fill(header, rows)
+        self._per_T = per_T
+        order = {Status.FAIL: 0, Status.WARN: 1, Status.PASS: 2}
+        self.checks.set_rows([(r.status, render_check(r), None) for r in sorted(worst, key=lambda r: order[r.status])])
+
+    def _forces(self, res, cs_m, ring_id, sq_hi, nom_ref, direction, gland, is_el) -> None:
+        U = UNITS
+        ds = dataset()
+        for c in self.force_cards:
+            c.hide()
+        if not is_el:
+            self.force_table.fill([t("ui.force_cond")], [[t("ui.force_na")]])
+            self.force_note.setText("")
+            return
+        hardness = self.hardness.si()
+        sq_nom = (nom_ref.squeeze_min + nom_ref.squeeze_max) / 2
+        q_nom = load_per_length(ds, cs_m, sq_nom, hardness, ring_id)
+        q_max = load_per_length(ds, cs_m, sq_hi, hardness, ring_id)
+        to_unit = (lambda q: f"{q / 1000:.2f} N/mm") if U.L == "mm" else (lambda q: f"{q / 175.1268:.1f} lbf/in")
+        rows = []
+        for label, q in ((t("ui.force_at_nominal", sq=sq_nom, T=U.fmt_T(U.T_ref_K)), q_nom),
+                         (t("ui.force_at_max", sq=sq_hi), q_max)):
+            rows.append([label, "–" if q is None else f"{to_unit(q.min_N_per_m)} – {to_unit(q.max_N_per_m)}",
+                         "–" if q is None else f"{to_unit(q.typical_min_N_per_m)} – {to_unit(q.typical_max_N_per_m)}"])
+        self.force_table.fill([t("ui.force_cond"), t("ui.force_range"), t("ui.force_typical")], rows)
+        msgs = []
+        if q_nom is None or q_max is None:
+            msgs.append(t("ui.force_na"))
+        if ring_id is None:
+            msgs.append(t("ui.force_need_id"))
+        elif q_max is not None:
+            fN = (lambda f: f"{f / 1000:.2f} kN") if U.L == "mm" else (lambda f: f"{f / 4.4482216:.0f} lbf")
+            D_seal = ring_id + 2 * cs_m
+            clamp = face_clamp_load(q_max, ring_id, cs_m, D_seal, self.pressure.si(), direction)
+            self.force_cards[0].set(t("ui.force_total"), f"{fN(clamp.compression_N[0])} – {fN(clamp.compression_N[1])}")
+            self.force_cards[0].show()
+            if gland == "face":
+                self.force_cards[1].set(t("ui.force_pressure", d=U.fmt_L(D_seal)), fN(clamp.pressure_N))
+                self.force_cards[2].set(t("ui.force_clamp"), fN(clamp.clamp_min_N))
+                self.force_cards[1].show()
+                self.force_cards[2].show()
+                msgs.append(t("ui.force_clamp_note") + ("" if direction == "internal" else " " + t("ui.force_external")))
+            else:
+                msgs.append(t("ui.force_radial_note"))
+        self.force_note.setText("\n".join(msgs))
+
+    def _save_csv(self) -> None:
+        if self._per_T is not None:
+            save_bytes(self, t("ui.download_csv"), "yuva_sicaklik.csv", "CSV (*.csv)",
+                       self._per_T.to_csv(index=False).encode("utf-8"))
+
+
+

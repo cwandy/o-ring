@@ -13,16 +13,32 @@ uv sync
 uv run pytest
 ```
 
+Masaüstü programı (asıl arayüz):
+
+```bash
+uv run python desktop/main.py
+```
+
+Tarayıcı sürümü (yalnızca geliştirme):
+
 ```bash
 uv run streamlit run app/streamlit_app.py
 ```
 
+Python'suz Windows paketi (`dist/o-ring-windows-x64-*.zip`, içinde `O-Ring.exe`):
+
+```bash
+uv run python tools/build_windows_offline.py
+```
+
 ## Sayfalar
+
+Her sayfada girdiler solda, ölçülü yuva şeması sağda, sonuçlar altta.
 
 | Sayfa | İşlev |
 |---|---|
-| Yuva Kontrol | Mevcut bir piston, rod veya face yuvasını tek noktada ve sıcaklık taraması boyunca kontrol eder; squeeze/doluluk ve boşluk grafikleri, kesit görünümü |
-| Tolerans Analizi | Worst-case, RSS ve Monte Carlo analizi; histogramlar, geçme oranları, duyarlılıklar |
+| Yuva Hesaplayıcı | Malzeme, kesit, sıcaklık ve basınçtan yuva derinliği/genişliği, toleranslar, sıcaklıkla değişim ve gereken kuvvet |
+| Yuva Kontrol | Mevcut bir piston, rod veya face yuvasını kontrol eder: çalışma noktası, sıcaklık taraması, tolerans analizi (ISO 286 sınıfları veya özel sapmalar; worst-case, RSS, Monte Carlo), kesit görünümü, rapor/DXF |
 | Ölçü Öner | AS568 ve ISO 3601-1 o-ringleri tarar, her biri için yuvayı tasarlayıp doğrular ve sıralar |
 | Yaylı Conta | Katalog ölçüleriyle yaylı conta (PTFE/PCTFE ceket) için termal sıkışma ve boşluk kontrolü |
 

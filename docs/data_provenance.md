@@ -36,6 +36,12 @@ eğriyi kullanır. Türetme aritmetiği: `tools/derive_thermal_data.py`.
 Açık kaynak bulunamayanlar: PCTFE 300 K üstü genleşme ve üst kullanım sıcaklığı; Inconel 718 300 K
 üstü; NTO ve RP-1 kaynama noktası (bilgi amaçlı, hesapta kullanılmıyor).
 
+ISO 286 tolerans sınıfları (`data/iso286.yaml`): Miki Pulley "List of Fit Tolerances (Excerpt from JIS B 0401)"
+sayfasından `tools/derive_iso286.py` ile ayrıştırıldı (JIS B 0401-2, ISO 286-2 değerlerini verir; 3–500 mm;
+delik E7–H10, mil d8–h9). Bağımsız bir kopya olan PyPI `isofits` 1.0 paketiyle (3–400 mm) 400 değer
+karşılaştırıldı: 5 fark çıktı, beşi de `isofits`'teki yazım hatası (Miki değerleri her satırda üst − alt = IT
+eşitliğini sağlıyor; bu eşitlik `tests/test_fits.py` ile tüm tablo için test ediliyor). js/JS = ±IT/2.
+
 Monograph 29 tabloları, OCR çıktısına ek olarak sayfa görüntüleriyle tek tek karşılaştırılarak girildi.
 
 ## PTFE geçiş bölgesi

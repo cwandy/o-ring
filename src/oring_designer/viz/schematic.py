@@ -16,6 +16,7 @@ in the legend only.
 
 from __future__ import annotations
 
+import math
 from html import escape
 
 from ..i18n import t
@@ -37,7 +38,12 @@ SYMBOL = {
 ROD_GROOVE = "ØF"  # groove diameter of a rod gland
 
 
-def _defs() -> str:
+SOLID = {"url(#hA)": "#dddcd6", "url(#hB)": "#c7c6bf"}  # fills without hatching (SVG Tiny)
+
+
+def _defs(tiny: bool) -> str:
+    if tiny:
+        return ""
     return (
         '<defs>'
         '<pattern id="hA" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
@@ -46,42 +52,58 @@ def _defs() -> str:
         '<pattern id="hB" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">'
         '<rect width="7" height="7" fill="#c7c6bf"/><line x1="0" y1="0" x2="0" y2="7" stroke="#a3a29b" '
         'stroke-width="1.3"/></pattern>'
-        f'<marker id="ar" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" '
-        f'markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,1.5 L10,5 L0,8.5 z" fill="{INK}"/>'
-        '</marker>'
-        f'<marker id="ap" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" '
-        f'markerUnits="userSpaceOnUse" orient="auto"><path d="M0,1 L10,5 L0,9 z" fill="{PRESSURE}"/></marker>'
         '</defs>'
     )
 
 
 class _Svg:
-    def __init__(self) -> None:
+    """SVG builder. Arrow heads are explicit triangles and text halos are a separate white
+    copy, so the output also renders in SVG Tiny renderers (Qt), where ``tiny`` replaces the
+    hatch patterns by solid fills."""
+
+    def __init__(self, tiny: bool = False) -> None:
         self.parts: list[str] = []
+        self.tiny = tiny
 
     def add(self, s: str) -> None:
         self.parts.append(s)
 
     def poly(self, pts, fill: str, stroke: str = INK, width: float = 1.4) -> None:
+        if self.tiny:
+            fill = SOLID.get(fill, fill)
         d = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
         self.add(f'<polygon points="{d}" fill="{fill}" stroke="{stroke}" stroke-width="{width}" '
                  'stroke-linejoin="round"/>')
 
+    def _head(self, x_tip, y_tip, x_from, y_from, color: str, size: float) -> None:
+        dx, dy = x_tip - x_from, y_tip - y_from
+        n = math.hypot(dx, dy) or 1.0
+        ux, uy = dx / n, dy / n
+        bx, by = x_tip - ux * size, y_tip - uy * size
+        hw = size * 0.38
+        pts = [(x_tip, y_tip), (bx - uy * hw, by + ux * hw), (bx + uy * hw, by - ux * hw)]
+        d = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+        self.add(f'<polygon points="{d}" fill="{color}" stroke="none"/>')
+
     def line(self, x0, y0, x1, y1, color: str = INK, width: float = 0.9, dash: str | None = None,
              start: bool = False, end: bool = False, marker: str = "ar") -> None:
         extra = f' stroke-dasharray="{dash}"' if dash else ""
-        if start:
-            extra += f' marker-start="url(#{marker})"'
-        if end:
-            extra += f' marker-end="url(#{marker})"'
         self.add(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1:.1f}" y2="{y1:.1f}" stroke="{color}" '
                  f'stroke-width="{width}"{extra}/>')
+        size = 12.0 if marker == "ap" else 9.0
+        if start:
+            self._head(x0, y0, x1, y1, color, size)
+        if end:
+            self._head(x1, y1, x0, y0, color, size)
 
     def text(self, x, y, s: str, size: int = 16, anchor: str = "start", weight: str = "600",
              color: str = INK, halo: bool = True) -> None:
-        h = ' paint-order="stroke" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"' if halo else ""
-        self.add(f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}" '
-                 f'font-weight="{weight}" fill="{color}"{h}>{escape(s)}</text>')
+        common = (f'x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}" '
+                  f'font-weight="{weight}"')
+        if halo:
+            self.add(f'<text {common} fill="#ffffff" stroke="#ffffff" stroke-width="4" '
+                     f'stroke-linejoin="round">{escape(s)}</text>')
+        self.add(f'<text {common} fill="{color}">{escape(s)}</text>')
 
 
 def _label(sym: str, dims: dict, key: str) -> str:
@@ -151,68 +173,97 @@ def _radius_leader(svg: _Svg, px: float, py: float, tx: float, ty: float, label:
     svg.text(tx, ty, label, size=15, anchor=anchor)
 
 
+def _seal_vertical(svg: _Svg, dims: dict, seal: str, g0: float, g1: float, xa: float, xb: float) -> None:
+    """Seal in a radial groove drawn with a vertical axis: the groove spans g0..g1 axially (y),
+    the seal is squeezed between xa and xb radially (x). Spring jacket opens upwards."""
+    gw, d = g1 - g0, xb - xa
+    cx, cy = (xa + xb) / 2, (g0 + g1) / 2
+    if seal == "spring":
+        sw = gw * 0.82
+        u0 = (gw - sw) / 2
+        inner = _Svg()
+        _spring_seal(inner, u0, 0.0, u0 + sw, d, open_left=True)
+        # local frame (u along the groove width, v across) -> page: x = xa + v, y = g0 + u
+        svg.add(f'<g transform="matrix(0,1,1,0,{xa:.1f},{g0:.1f})">{"".join(inner.parts)}</g>')
+        # b and h are listed in the legend (no room on the drawing next to the gap label)
+    else:
+        _ring(svg, cx, cy, d / 2, gw * 0.86 / 2)
+        svg.text(cx, cy + 5, _label(SYMBOL["cs"], dims, "cs"), size=15, anchor="middle")
+
+
+def _axis_vertical(svg: _Svg, ax: float) -> None:
+    svg.line(ax, 14, ax, H - 6, color=INK_2, dash="14 4 3 4")
+    svg.text(ax + 4, 12, "℄", size=13, weight="400", color=INK_2)
+
+
+def _radial_dia(svg: _Svg, ax: float, y: float, x_to: float, label: str) -> None:
+    """Diameter from the vertical centre line (single arrow head), label above the line."""
+    svg.line(ax, y, x_to, y, end=True)
+    svg.text(ax + 10, y - 7, label)
+
+
 def _piston(svg: _Svg, dims: dict, seal: str) -> None:
-    cl, y_bore, y_od, y_gb = 320, 100, 114, 200
-    gx0, gx1 = 240, 360
-    svg.poly([(20, 28), (XR, 28), (XR, y_bore), (20, y_bore)], "url(#hB)")  # cylinder
+    """Piston gland, axis vertical: piston on the left, cylinder wall on the right."""
+    ax, x_gb, x_od, x_bore = 40, 310, 400, 414
+    g0, g1, top, bot = 150, 270, 24, 344
     r = 9
-    svg.poly([(20, y_od), (gx0, y_od), (gx0, y_gb - r), (gx0 + r, y_gb), (gx1 - r, y_gb), (gx1, y_gb - r),
-              (gx1, y_od), (XR, y_od), (XR, cl), (20, cl)], "url(#hA)")  # piston
-    _seal(svg, dims, seal, gx0, gx1, y_bore, y_gb)
-    svg.line(10, cl, XR + 10, cl, color=INK_2, dash="14 4 3 4")
-    svg.text(16, cl - 6, "℄", size=13, weight="400", color=INK_2)
+    svg.poly([(ax, top), (x_od, top), (x_od, g0), (x_gb + r, g0), (x_gb, g0 + r), (x_gb, g1 - r),
+              (x_gb + r, g1), (x_od, g1), (x_od, bot), (ax, bot)], "url(#hA)")  # piston
+    svg.poly([(x_bore, top), (XR, top), (XR, bot), (x_bore, bot)], "url(#hB)")  # cylinder
+    _seal_vertical(svg, dims, seal, g0, g1, x_gb, x_bore)
+    _axis_vertical(svg, ax)
     if "bore" in dims:
-        _diameter(svg, 60, cl, y_bore, _label("ØA", dims, "bore"), 190)
+        _radial_dia(svg, ax, 62, x_bore, _label("ØA", dims, "bore"))
     if "piston" in dims:
-        _diameter(svg, 165, cl, y_od, _label("ØC", dims, "piston"), 280)
+        _radial_dia(svg, ax, 104, x_od, _label("ØC", dims, "piston"))
+    if "groove_d" in dims or "depth" in dims:
+        svg.line(x_gb, g1, x_gb, 334, width=0.7)
     if "groove_d" in dims:
-        svg.line(gx1, y_gb, 425, y_gb, width=0.7)
-        _diameter(svg, 412, cl, y_gb, _label("ØB", dims, "groove_d"), 285)
+        _radial_dia(svg, ax, 326, x_gb, _label("ØB", dims, "groove_d"))
     if "depth" in dims:
-        svg.line(gx1, y_gb, 495, y_gb, width=0.7)
-        svg.line(480, y_gb, 480, y_bore, start=True, end=True)
-        svg.text(488, 160, _label("L", dims, "depth"))
+        svg.line(x_gb, 298, x_bore, 298, start=True, end=True)
+        svg.text(x_bore + 8, 303, _label("L", dims, "depth"))
     if "width" in dims:
-        svg.line(gx0, y_gb, gx0, y_gb + 42, width=0.7)
-        svg.line(gx1, y_gb, gx1, y_gb + 42, width=0.7)
-        svg.line(gx0, y_gb + 36, gx1, y_gb + 36, start=True, end=True)
-        svg.text((gx0 + gx1) / 2, y_gb + 54, _label("G", dims, "width"), anchor="middle")
+        svg.line(x_gb, g0, 238, g0, width=0.7)
+        svg.line(x_gb, g1, 238, g1, width=0.7)
+        svg.line(246, g0, 246, g1, start=True, end=True)
+        svg.text(238, (g0 + g1) / 2 + 5, _label("G", dims, "width"), anchor="end")
     if "gap" in dims:
-        _radius_leader(svg, 112, (y_bore + y_od) / 2, 108, 150, _label("E", dims, "gap"), anchor="start")
+        _radius_leader(svg, (x_od + x_bore) / 2, 128, x_bore + 30, 140, _label("E", dims, "gap"), anchor="start")
     if "radius" in dims:
-        _radius_leader(svg, gx0 + 3, y_gb - 3, 228, 178, _label("R", dims, "radius"))
+        _radius_leader(svg, x_gb + 3, g1 - 3, 292, 288, _label("R", dims, "radius"))
 
 
 def _rod(svg: _Svg, dims: dict, seal: str) -> None:
-    cl, y_rod, y_thr, y_gb = 320, 220, 206, 120
-    gx0, gx1 = 240, 360
+    """Rod gland, axis vertical: rod on the left, housing with the groove on the right."""
+    ax, x_rod, x_thr, x_gb = 40, 290, 302, 406
+    g0, g1, top, bot = 150, 270, 24, 344
     r = 9
-    svg.poly([(20, 28), (XR, 28), (XR, y_thr), (gx1, y_thr), (gx1, y_gb + r), (gx1 - r, y_gb),
-              (gx0 + r, y_gb), (gx0, y_gb + r), (gx0, y_thr), (20, y_thr)], "url(#hA)")  # housing
-    svg.poly([(20, y_rod), (XR, y_rod), (XR, cl), (20, cl)], "url(#hB)")  # rod
-    _seal(svg, dims, seal, gx0, gx1, y_gb, y_rod)
-    svg.line(10, cl, XR + 10, cl, color=INK_2, dash="14 4 3 4")
-    svg.text(16, cl - 6, "℄", size=13, weight="400", color=INK_2)
+    svg.poly([(ax, top), (x_rod, top), (x_rod, bot), (ax, bot)], "url(#hB)")  # rod
+    svg.poly([(x_thr, top), (XR, top), (XR, bot), (x_thr, bot), (x_thr, g1), (x_gb - r, g1), (x_gb, g1 - r),
+              (x_gb, g0 + r), (x_gb - r, g0), (x_thr, g0)], "url(#hA)")  # housing
+    _seal_vertical(svg, dims, seal, g0, g1, x_rod, x_gb)
+    _axis_vertical(svg, ax)
     if "rod" in dims:
-        _diameter(svg, 60, cl, y_rod, _label("ØD", dims, "rod"), 290)
+        _radial_dia(svg, ax, 62, x_rod, _label("ØD", dims, "rod"))
     if "throat" in dims:
-        _diameter(svg, 165, cl, y_thr, _label("ØT", dims, "throat"), 262)
+        _radial_dia(svg, ax, 104, x_thr, _label("ØT", dims, "throat"))
+    if "groove_d" in dims or "depth" in dims:
+        svg.line(x_gb, g1, x_gb, 334, width=0.7)
     if "groove_d" in dims:
-        svg.line(gx1, y_gb, 425, y_gb, width=0.7)
-        _diameter(svg, 412, cl, y_gb, _label(ROD_GROOVE, dims, "groove_d"), 290)
+        _radial_dia(svg, ax, 326, x_gb, _label(ROD_GROOVE, dims, "groove_d"))
     if "depth" in dims:
-        svg.line(gx1, y_gb, 495, y_gb, width=0.7)
-        svg.line(480, y_gb, 480, y_rod, start=True, end=True)
-        svg.text(488, 178, _label("L", dims, "depth"))
+        svg.line(x_rod, 298, x_gb, 298, start=True, end=True)
+        svg.text(x_gb + 8, 303, _label("L", dims, "depth"))
     if "width" in dims:
-        svg.line(gx0, y_gb, gx0, y_gb - 28, width=0.7)
-        svg.line(gx1, y_gb, gx1, y_gb - 28, width=0.7)
-        svg.line(gx0, y_gb - 22, gx1, y_gb - 22, start=True, end=True)
-        svg.text((gx0 + gx1) / 2, y_gb - 30, _label("G", dims, "width"), anchor="middle")
+        svg.line(x_gb, g0, 450, g0, width=0.7)
+        svg.line(x_gb, g1, 450, g1, width=0.7)
+        svg.line(442, g0, 442, g1, start=True, end=True)
+        svg.text(452, (g0 + g1) / 2 + 5, _label("G", dims, "width"))
     if "gap" in dims:
-        _radius_leader(svg, 112, (y_rod + y_thr) / 2, 108, 182, _label("E", dims, "gap"), anchor="start")
+        _radius_leader(svg, (x_rod + x_thr) / 2, 128, 262, 118, _label("E", dims, "gap"))
     if "radius" in dims:
-        _radius_leader(svg, gx0 + 3, y_gb + 3, 228, 150, _label("R", dims, "radius"))
+        _radius_leader(svg, x_gb - 3, g1 - 3, 452, 254, _label("R", dims, "radius"), anchor="start")
 
 
 def _face(svg: _Svg, dims: dict, seal: str, direction: str) -> None:
@@ -259,10 +310,10 @@ def _face(svg: _Svg, dims: dict, seal: str, direction: str) -> None:
 
 
 def gland_schematic(kind: str, dims: dict[str, str | None], unit: str, direction: str = "internal",
-                    seal: str = "oring") -> str:
+                    seal: str = "oring", tiny: bool = False) -> str:
     """SVG text of the dimensioned schematic. ``dims`` values are already formatted (no unit)."""
     dims = {k: v for k, v in dims.items() if v is not None}
-    svg = _Svg()
+    svg = _Svg(tiny)
     if kind == "piston":
         _piston(svg, dims, seal)
     elif kind == "rod":
@@ -291,4 +342,4 @@ def gland_schematic(kind: str, dims: dict[str, str | None], unit: str, direction
     body = "".join(svg.parts)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {total_h}" width="100%" '
             f'font-family="Segoe UI, Helvetica, Arial, sans-serif">'
-            f'<rect width="{W}" height="{total_h}" fill="#ffffff"/>{_defs()}{body}</svg>')
+            f'<rect width="{W}" height="{total_h}" fill="#ffffff"/>{_defs(tiny)}{body}</svg>')

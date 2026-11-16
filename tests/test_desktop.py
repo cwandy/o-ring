@@ -1,0 +1,106 @@
+"""Desktop (Qt) UI smoke tests, run headless (QT_QPA_PLATFORM=offscreen)."""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+import pytest
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+DESKTOP = Path(__file__).resolve().parents[1] / "desktop"
+try:
+    from PySide6.QtWidgets import QApplication
+except ImportError as exc:  # pragma: no cover - missing Qt system libraries
+    pytest.skip(f"Qt not available: {exc}", allow_module_level=True)
+
+sys.path.insert(0, str(DESKTOP))
+
+
+@pytest.fixture(scope="module")
+def app():
+    return QApplication.instance() or QApplication([])
+
+
+@pytest.fixture(scope="module")
+def window(app):
+    import main
+
+    w = main.MainWindow()
+    for p in w.pages:
+        p._run()
+    return w
+
+
+def _errors(w):
+    return [p.error.text() for p in w.pages if not p.error.isHidden()]
+
+
+def test_all_pages_compute_without_error(window):
+    assert _errors(window) == []
+    calc = window.pages[0]
+    assert calc.cards[0].value.text().endswith("mm")
+
+
+def test_check_page_iso_class_and_tolerance_analysis(window):
+    page = window.pages[1]
+    tol = page.dim_tol[("piston", "bore")]
+    tol.cls.setCurrentIndex(tol.cls.findData("H8"))
+    assert tol.deviations() == pytest.approx((0.0, 39e-6))  # 50 mm: 40 < D <= 50, H8 = +39/0 um
+    assert not tol.lo.isEnabled()
+    page._run()
+    page._run_tol()
+    assert page.tol_banner.isHidden() or page.tol_banner.text() == ""
+    assert page.tol_summary.rowCount() >= 5
+    assert page._report.tolerances["gland.bore_diameter_m"].upper_m == pytest.approx(39e-6)
+
+
+def test_check_page_all_gland_types(window):
+    page = window.pages[1]
+    for i in (1, 2, 0):
+        page.kind.group.buttons()[i].setChecked(True)
+        page._run()
+        assert page.error.isHidden(), page.error.text()
+
+
+def test_default_corner_radius_is_0_3_mm(window):
+    page = window.pages[1]
+    for kind in ("piston", "rod", "face"):
+        assert page.dim_value[(kind, "radius")].si() == pytest.approx(0.3e-3)
+
+
+def test_units_switch_keeps_si_values(window, app):
+    page = window.pages[1]
+    v = page.dim_value[("piston", "bore")]
+    before = v.si()
+    window.len_box.setCurrentText("in")
+    assert v.suffix().strip() == "in"
+    assert v.si() == pytest.approx(before)
+    window.len_box.setCurrentText("mm")
+    assert v.value() == pytest.approx(before * 1e3)
+
+
+def test_size_page_shows_proposal_detail(window):
+    page = window.pages[2]
+    assert page._ok, "no proposals"
+    assert page.table.currentRow() == 0
+    assert page.dims.rowCount() >= 5
+
+
+def test_spring_page_face(window):
+    page = window.pages[3]
+    page.kind.group.buttons()[2].setChecked(True)
+    page._run()
+    assert page.error.isHidden(), page.error.text()
+
+
+def test_check_page_report_and_dxf(window):
+    from oring_designer.export.dxf import gland_profile, to_bytes
+    from oring_designer.export.report import build_report, to_pdf
+    from ui import dataset
+
+    page = window.pages[1]
+    page._run()
+    assert to_pdf(build_report(page._report, dataset())).startswith(b"%PDF")
+    assert b"SECTION" in to_bytes(gland_profile(page._design, "mm", ""))

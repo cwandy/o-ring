@@ -81,3 +81,8 @@ references:
     url: "https://online.flippingbook.com/view/954046886/1390"
     accessed: "2026-11-13"
     notes: "Values taken from the search excerpt of the online edition (page not opened directly); verify against the printed page."
+  - id: miki_jis_b0401
+    citation: "Miki Pulley, List of Fit Tolerances (Excerpt from JIS B 0401). JIS B 0401-2 tabulates the ISO 286-2 limit deviations for holes and shafts, 3-500 mm."
+    url: "https://www.mikipulley.co.jp/en/resources/standards-fitting-tolerances"
+    accessed: "2026-11-16"
+    notes: "Parsed by tools/derive_iso286.py. Cross-checked against the independent transcription in the PyPI package isofits 1.0 (3-400 mm): 400 values, 5 differences, all typing errors in isofits (the Miki values satisfy upper - lower = IT of the grade). js/JS = +/- IT/2 by definition (ISO 286-1)."

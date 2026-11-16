@@ -109,14 +109,14 @@ def design_form(ds: Dataset, ui: UnitInputs) -> FormResult:
                 piston_d = length(t("ui.piston_diameter"), 49.9, "piston")
                 groove = length(t("ui.groove_diameter_piston"), 44.2, "groove_p")
                 width = length(t("ui.groove_width"), 4.8, "width_p")
-                radius = length(t("ui.corner_radius"), 0.0, "radius_p")
+                radius = length(t("ui.corner_radius"), 0.3, "radius_p")
                 ring_default = (43.7, 3.53)
             elif kind == "rod":
                 rod = length(t("ui.rod_diameter"), 20.0, "rod")
                 throat = length(t("ui.throat_diameter"), 20.1, "throat")
                 groove = length(t("ui.groove_diameter_rod"), 26.0, "groove_r")
                 width = length(t("ui.groove_width"), 4.8, "width_r")
-                radius = length(t("ui.corner_radius"), 0.0, "radius_r")
+                radius = length(t("ui.corner_radius"), 0.3, "radius_r")
                 ring_default = (19.8, 3.53)
             else:
                 direction = st.radio(t("ui.pressure_direction"), ["internal", "external"],
@@ -124,7 +124,7 @@ def design_form(ds: Dataset, ui: UnitInputs) -> FormResult:
                 gid = length(t("ui.groove_id"), 27.5, "gid")
                 god = length(t("ui.groove_od"), 36.8, "god")
                 depth = length(t("ui.groove_depth"), 2.65, "gdepth")
-                radius = length(t("ui.corner_radius"), 0.0, "radius_f")
+                radius = length(t("ui.corner_radius"), 0.3, "radius_f")
                 ring_default = (29.87, 3.53)
             ecc = None
             if kind != "face" and not st.checkbox(t("ui.full_eccentricity"), value=True):

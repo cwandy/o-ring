@@ -3,7 +3,6 @@
 package main
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -16,7 +15,7 @@ const createNoWindow = 0x08000000
 
 var job windows.Handle // kept open for the launcher's lifetime; closing it kills the server
 
-func pythonPath(root string) string { return filepath.Join(root, "python", "python.exe") }
+func pythonPath(root string) string { return filepath.Join(root, "python", "pythonw.exe") }
 
 func hideWindow(c *exec.Cmd) {
 	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
@@ -47,36 +46,6 @@ func bindToLauncher(c *exec.Cmd) {
 	}
 }
 
-func findBrowser() string {
-	var cands []string
-	for _, env := range []string{"ProgramFiles(x86)", "ProgramFiles", "LocalAppData"} {
-		base := os.Getenv(env)
-		if base == "" {
-			continue
-		}
-		cands = append(cands,
-			filepath.Join(base, "Microsoft", "Edge", "Application", "msedge.exe"),
-			filepath.Join(base, "Google", "Chrome", "Application", "chrome.exe"))
-	}
-	// Edge first in every location, then Chrome
-	for _, want := range []string{"msedge.exe", "chrome.exe"} {
-		for _, c := range cands {
-			if filepath.Base(c) == want {
-				if _, err := os.Stat(c); err == nil {
-					return c
-				}
-			}
-		}
-	}
-	return ""
-}
-
-func openDefault(url string) {
-	c := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	hideWindow(c)
-	_ = c.Start()
-}
-
 func messageBox(text string, flags uint32) {
 	t, _ := windows.UTF16PtrFromString(text)
 	c, _ := windows.UTF16PtrFromString(appTitle)
@@ -84,4 +53,3 @@ func messageBox(text string, flags uint32) {
 }
 
 func showError(text string) { messageBox(text, windows.MB_OK|windows.MB_ICONERROR) }
-func showInfo(text string)  { messageBox(text, windows.MB_OK|windows.MB_ICONINFORMATION) }

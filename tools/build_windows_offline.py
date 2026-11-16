@@ -5,10 +5,10 @@ and double-click ``Baslat.bat``. Contents:
 
   o-ring/
     python/            Python embeddable distribution (python.org) + Lib/site-packages
-    src/ data/ app/    the program, its data files and the Streamlit app
-    .streamlit/        Streamlit config (no usage statistics, no e-mail prompt)
-    O-Ring.exe         starts the app in its own window (Edge/Chrome app mode), see tools/launcher
-    Baslat.bat         fallback: starts the app and opens the default browser
+    src/ data/         the calculation program and its data files
+    desktop/           the desktop user interface (Qt / PySide6)
+    O-Ring.exe         starts the desktop program without a console window (tools/launcher)
+    Baslat.bat         fallback: the same with python\pythonw.exe
     BENIOKU.txt        short Turkish instructions
 
 Dependencies are the exact versions pinned in uv.lock, installed as Windows wheels
@@ -33,30 +33,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 BAT = r"""@echo off
-chcp 65001 >nul
 cd /d "%~dp0"
-title O-Ring Yuva Tasarim Programi
-echo O-Ring Yuva Tasarim Programi baslatiliyor...
-echo Tarayici birkac saniye icinde acilacak: http://127.0.0.1:8501
-echo Programi kapatmak icin bu pencereyi kapatin.
-start "" cmd /c "timeout /t 6 >nul & start http://127.0.0.1:8501"
-"%~dp0python\python.exe" -m streamlit run "%~dp0app\streamlit_app.py" --server.address 127.0.0.1 --server.port 8501 --server.headless true
-pause
-"""
-
-CONFIG = """[browser]
-gatherUsageStats = false
-
-[server]
-address = "127.0.0.1"
-headless = true
-fileWatcherType = "none"
-
-[client]
-toolbarMode = "minimal"
-
-[global]
-developmentMode = false
+start "" "%~dp0python\pythonw.exe" "%~dp0desktop\main.py"
 """
 
 README = r"""O-Ring Yuva Tasarim Programi - internetsiz Windows paketi
@@ -64,6 +42,7 @@ README = r"""O-Ring Yuva Tasarim Programi - internetsiz Windows paketi
 
 Kurulum gerekmez, Python gerekmez, internet gerekmez, YONETICI YETKISI GEREKMEZ.
 Program hicbir sey kurmaz ve kayit defterine yazmaz; her sey bu klasorun icinden calisir.
+Tarayici kullanmaz: kendi masaustu penceresinde acilir.
 
 1. (Onerilir) ZIP dosyasina sag tiklayin > Ozellikler > alttaki "Engellemeyi kaldir"
    kutusunu isaretleyin > Tamam. Bu, Windows'un "internetten gelen dosya" uyarisini
@@ -73,23 +52,17 @@ Program hicbir sey kurmaz ve kayit defterine yazmaz; her sey bu klasorun icinden
    isteyen klasorlere cikarmayin.) Yol cok uzun olmamali.
 3. o-ring klasorundeki "O-Ring.exe" dosyasina cift tiklayin. Isterseniz sag tik >
    "Gonder" > "Masaustu (kisayol olustur)" ile masaustune kisayol koyabilirsiniz.
-4. Kendi penceresinde "Baslatiliyor" ekrani acilir; birkac saniye sonra program gelir.
-   Pencere Microsoft Edge (yoksa Chrome) ile cizilir ama adres cubugu/sekme yoktur ve
-   internete baglanmaz.
-5. Programi kapatmak icin pencereyi kapatin; arka plandaki hesap sunucusu da kapanir.
+4. Program penceresi birkac saniye icinde acilir. Kapatmak icin pencereyi kapatin.
 
 Notlar
 - O-Ring.exe calismazsa (ornegin kurum politikasi .exe'yi engelliyorsa) "Baslat.bat"
-  ayni programi varsayilan tarayicida acar; kapatmak icin siyah pencereyi kapatin.
-- Edge/Chrome bulunamazsa program varsayilan tarayicida acilir ve bir bilgi kutusu
-  cikar; programi kapatmak icin o kutuda Tamam'a basin.
+  ayni programi acar.
 - Hata olursa kayit dosyasi: %LOCALAPPDATA%\o-ring\son_calisma.log
-- Program yalnizca bu bilgisayardan erisilebilir (127.0.0.1); bu nedenle Windows
-  Guvenlik Duvari izin sormamalidir. Sorarsa "Iptal" demeniz yeterlidir.
 - Windows SmartScreen "bilinmeyen yayinci" uyarisi verirse: "Ek bilgi" > "Yine de calistir".
 - Kurumunuzun BT politikasi (AppLocker vb.) kullanici klasorlerinden program
   calistirmayi tamamen engelliyorsa paket calismaz; bu durumda BT birimine danisin.
-- Veri dosyalari (malzemeler, kurallar, standart olculer) "data" klasorundedir.
+- Veri dosyalari (malzemeler, kurallar, standart olculer, ISO 286 toleranslari)
+  "data" klasorundedir.
 
 Python {py} (python.org embeddable, SHA-256 {sha}) ve uv.lock'taki surumler kullanilmistir.
 """
@@ -136,11 +109,9 @@ def main() -> int:
          "-r", str(req)])
 
     # 3. program, data, app, config, launcher
-    for name in ("src", "data", "app"):
+    for name in ("src", "data", "desktop"):
         shutil.copytree(ROOT / name, stage / name,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".gitkeep"))
-    (stage / ".streamlit").mkdir()
-    (stage / ".streamlit" / "config.toml").write_text(CONFIG, encoding="utf-8")
     (stage / "Baslat.bat").write_bytes(BAT.replace("\n", "\r\n").encode("ascii"))
     run(["go", "build", "-trimpath", "-ldflags", "-H=windowsgui -s -w", "-o", str(stage / "O-Ring.exe"), "."],
         cwd=ROOT / "tools" / "launcher", env={**os.environ, "GOOS": "windows", "GOARCH": "amd64",
@@ -156,6 +127,12 @@ def main() -> int:
         raise SystemExit(f"non-Windows binaries found: {bad[:5]}")
     pyds = list(site.rglob("*.pyd"))
     print(f"{len(pyds)} Windows extension modules (.pyd)")
+    for need in ("PySide6", "shiboken6", "matplotlib", "reportlab", "ezdxf"):
+        if not (site / need).is_dir():
+            raise SystemExit(f"missing package in the bundle: {need}")
+    for unwanted in ("streamlit", "plotly", "pyarrow"):
+        if (site / unwanted).exists():
+            raise SystemExit(f"browser-UI package should not be in the bundle: {unwanted}")
 
     # 5. zip
     final = out / f"o-ring-windows-x64-py{py}.zip"
