@@ -315,12 +315,15 @@ class Card(QFrame):
     def __init__(self, title: str = "", parent=None):
         super().__init__(parent)
         self.setObjectName("card")
-        self.setStyleSheet("#card { background: white; border: 1px solid #dddcd6; border-radius: 8px; }")
+        self.setStyleSheet("#card { background: #f8fafd; border: 1px solid #dfe5ee; border-left: 4px solid #2a78d6;"
+                           " border-radius: 8px; }")
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(12, 8, 12, 8)
+        lay.setContentsMargins(10, 6, 10, 6)
+        lay.setSpacing(1)
         self.title, self.value, self.caption = QLabel(title), QLabel("–"), QLabel("")
-        self.title.setStyleSheet("color: #52514e;")
-        self.value.setStyleSheet("font-size: 22px; font-weight: 600;")
+        self.title.setStyleSheet("color: #5b6270; font-size: 11px;")
+        self.title.setWordWrap(True)
+        self.value.setStyleSheet("font-size: 18px; font-weight: 700; color: #1d3557;")
         self.caption.setStyleSheet("color: #52514e; font-size: 11px;")
         self.caption.setWordWrap(True)
         self.value.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -347,6 +350,7 @@ class Table(QTableWidget):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setAlternatingRowColors(False)
+        self.fit = True  # False: fixed height with its own scroll bar
 
     def fill(self, header: list[str], rows: list[list[str]], colors: list[str | None] | None = None,
              color_col: int = 0, stretch_col: int | None = None) -> None:
@@ -372,6 +376,8 @@ class Table(QTableWidget):
 
     def fit_height(self) -> None:
         self.resizeRowsToContents()
+        if not self.fit:
+            return
         h = self.horizontalHeader().height() + sum(self.rowHeight(i) for i in range(self.rowCount()))
         self.setFixedHeight(h + 2 * self.frameWidth() + 2)
 
@@ -428,23 +434,13 @@ class SvgView(QWidget):
         s = self.renderer.defaultSize()
         self._ratio = s.height() / max(s.width(), 1)
         self.updateGeometry()
-        self.setMinimumHeight(int(self.width() * self._ratio))
         self.update()
-
-    def hasHeightForWidth(self) -> bool:
-        return True
 
     def heightForWidth(self, w: int) -> int:
         return int(w * self._ratio)
 
     def sizeHint(self) -> QSize:
         return QSize(520, int(520 * self._ratio))
-
-    def resizeEvent(self, e):
-        super().resizeEvent(e)
-        h = int(self.width() * self._ratio)
-        if abs(self.minimumHeight() - h) > 1:
-            self.setMinimumHeight(h)
 
     def paintEvent(self, e):
         p = QPainter(self)
@@ -454,17 +450,21 @@ class SvgView(QWidget):
         if h > self.height():
             h = self.height()
             w = h / self._ratio
-        self.renderer.render(p, QRectF(0, 0, w, h))
+        self.renderer.render(p, QRectF((self.width() - w) / 2, 0, w, h))
         p.end()
 
 
-class SchematicBox(QGroupBox):
+class SchematicBox(QFrame):
     def __init__(self, parent=None):
-        super().__init__(t("schematic.heading"), parent)
+        super().__init__(parent)
+        self.setObjectName("panel")
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 10, 12, 10)
+        cap = QLabel(t("schematic.heading"))
+        cap.setObjectName("panelTitle")
+        lay.addWidget(cap)
         self.view = SvgView()
-        lay.addWidget(self.view)
-        lay.addStretch(1)
+        lay.addWidget(self.view, 1)
 
     def show_gland(self, kind: str, dims: dict, direction: str = "internal", seal: str = "oring") -> None:
         self.view.set_svg(gland_schematic(kind, dims, UNITS.L, direction, seal, tiny=True))
@@ -531,45 +531,119 @@ def pct(v: float, nd: int = 1) -> str:
 
 # --------------------------------------------------------------------------- page skeleton
 class Page(QWidget):
-    """Inputs on the left, schematic on the right, results below; recompute is debounced."""
+    """Header (title, Formülasyon, Detaylar) / [inputs | schematic | summary] / details.
+
+    Without details the page fits one screen: inputs and summary scroll inside their own
+    panels if needed. Details (charts, sections, tables) appear only after "Detaylar".
+    """
 
     def __init__(self, title: str, intro: str = "", parent=None):
         super().__init__(parent)
-        from PySide6.QtWidgets import QApplication  # noqa: F401  (cursor handling below)
+        from PySide6.QtWidgets import QPushButton, QScrollArea, QTabWidget
 
+        self.setObjectName("page")
         root = QVBoxLayout(self)
-        root.setContentsMargins(20, 12, 20, 20)
+        root.setContentsMargins(16, 10, 16, 12)
         root.setSpacing(8)
-        root.addWidget(heading(title, 22))
+
+        head = QHBoxLayout()
+        titles = QVBoxLayout()
+        titles.setSpacing(0)
+        tl = QLabel(title)
+        tl.setObjectName("pageTitle")
+        titles.addWidget(tl)
         if intro:
-            root.addWidget(note(intro))
-        top = QHBoxLayout()
-        top.setSpacing(18)
-        self.form_widget = QWidget()
-        self.form = QVBoxLayout(self.form_widget)
-        self.form.setContentsMargins(0, 0, 0, 0)
-        top.addWidget(self.form_widget, 1)
-        right = QVBoxLayout()
+            il = QLabel(intro)
+            il.setObjectName("pageIntro")
+            il.setWordWrap(True)
+            titles.addWidget(il)
+        head.addLayout(titles, 1)
+        self.formula_btn = QPushButton("∑  " + t("desktop.formulas"))
+        self.formula_btn.setObjectName("secondary")
+        self.formula_btn.clicked.connect(lambda: show_formulas(self))
+        self.details_btn = QPushButton(t("desktop.details_show"))
+        self.details_btn.setCheckable(True)
+        self.details_btn.toggled.connect(self._toggle_details)
+        head.addWidget(self.formula_btn)
+        head.addWidget(self.details_btn)
+        root.addLayout(head)
+
+        self.body = QWidget()
+        self.body.setMinimumHeight(560)
+        body = QHBoxLayout(self.body)
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(12)
+        # inputs: tabs (one per group) + extra area below (buttons)
+        left = QVBoxLayout()
+        left.setSpacing(6)
+        self.input_tabs = QTabWidget()
+        self.input_tabs.setObjectName("inputTabs")
+        left.addWidget(self.input_tabs, 1)
+        self.form = QVBoxLayout()
+        left.addLayout(self.form)
+        lw = QWidget()
+        lw.setLayout(left)
+        lw.setMinimumWidth(430)
+        lw.setMaximumWidth(600)
+        body.addWidget(lw, 5)
         self.schematic = SchematicBox()
-        right.addWidget(self.schematic)
-        right.addStretch(1)
-        top.addLayout(right, 1)
-        root.addLayout(top)
+        body.addWidget(self.schematic, 5)
+        sw = QFrame()
+        sw.setObjectName("panel")
+        sl = QVBoxLayout(sw)
+        sl.setContentsMargins(12, 10, 12, 10)
+        cap = QLabel(t("desktop.summary"))
+        cap.setObjectName("panelTitle")
+        sl.addWidget(cap)
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setFrameShape(QFrame.NoFrame)
+        inner = QWidget()
+        inner.setObjectName("panelInner")
+        self.summary = QVBoxLayout(inner)
+        self.summary.setContentsMargins(0, 0, 4, 0)
+        self.summary.setSpacing(8)
+        sa.setWidget(inner)
+        sl.addWidget(sa, 1)
+        sw.setMinimumWidth(440)
+        body.addWidget(sw, 6)
+        root.addWidget(self.body, 1)
+
         self.error = Banner()
         root.addWidget(self.error)
-        self.results_widget = QWidget()
-        self.results = QVBoxLayout(self.results_widget)
-        self.results.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(self.results_widget)
-        root.addStretch(1)
+        self.details_widget = QFrame()
+        self.details_widget.setObjectName("panel")
+        self.details = QVBoxLayout(self.details_widget)
+        self.details.setContentsMargins(14, 10, 14, 14)
+        self.details_widget.hide()
+        root.addWidget(self.details_widget)
+        self.results_widget = self.details_widget  # compatibility: disabled on error
+        self.groups: dict[str, int] = {}
         self._timer = debounce(self, self._run)
 
+    def _toggle_details(self, on: bool) -> None:
+        self.details_widget.setVisible(on)
+        self.details_btn.setText(t("desktop.details_hide" if on else "desktop.details_show"))
+
     def group(self, title: str) -> QGridLayout:
-        box = QGroupBox(title)
+        from PySide6.QtWidgets import QScrollArea
+
+        w = QWidget()
+        w.setObjectName("tabPage")
+        outer = QVBoxLayout(w)
+        outer.setContentsMargins(10, 10, 10, 10)
         grid = form_grid()
-        box.setLayout(grid)
-        self.form.addWidget(box)
+        outer.addLayout(grid)
+        outer.addStretch(1)
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setFrameShape(QFrame.NoFrame)
+        sa.setWidget(w)
+        self.groups[title] = self.input_tabs.addTab(sa, title)
         return grid
+
+    def set_group_visible(self, title: str, on: bool) -> None:
+        self.input_tabs.setTabVisible(self.groups[title], on)
 
     def watch(self, *widgets) -> None:
         for w in widgets:
@@ -590,14 +664,98 @@ class Page(QWidget):
             self.recompute()
         except Exception as exc:  # shown on the page; the program keeps running
             self.error.show_text(t("ui.invalid_input", error=exc), "error")
-            self.results_widget.setEnabled(False)
-        else:
-            self.results_widget.setEnabled(True)
         finally:
             QApplication.restoreOverrideCursor()
 
     def recompute(self) -> None:  # pragma: no cover - overridden
         raise NotImplementedError
+
+
+class StatusPill(QLabel):
+    """Overall result as a coloured badge."""
+
+    COLORS = {"PASS": ("#1e7d32", "#e3f4e4"), "WARN": ("#8a5a00", "#fff1cc"), "FAIL": ("#a4231b", "#fde4e1")}
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWordWrap(True)
+        self.hide()
+
+    def set_status(self, status, prefix: str = "") -> None:
+        s = status.value if isinstance(status, Status) else status
+        fg, bg = self.COLORS[s]
+        self.setStyleSheet(f"background:{bg}; color:{fg}; border:1px solid {fg}; border-radius:8px;"
+                           "padding:8px 12px; font-size:16px; font-weight:700;")
+        self.setText(f"{prefix or t('ui.overall')}: {status_text(s)}")
+        self.show()
+
+
+def show_formulas(parent: QWidget) -> None:
+    from html import escape
+
+    from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser
+
+    from oring_designer.i18n import _load
+
+    sections = _load("tr")["formulas.sections"]
+    parts = [f"<h2 style='color:#1d3557'>{escape(t('formulas.title'))}</h2>",
+             f"<p style='color:#52514e'>{escape(t('formulas.intro'))}</p>"]
+    for sec in sections:
+        parts.append(f"<h3 style='color:#1d4f91;margin-top:18px'>{escape(sec['title'])}</h3>")
+        for it in sec["items"]:
+            parts.append(
+                "<table width='100%' cellspacing='0' cellpadding='8' style='margin:6px 0'><tr><td "
+                "style='background:#eef4fc;border-left:4px solid #2a78d6;font-family:Cambria Math,Cambria,"
+                f"Times New Roman,serif;font-size:15px'>{escape(it['eq'])}</td></tr>"
+                f"<tr><td style='color:#3d3d3a'>{escape(it['note'])}</td></tr></table>")
+    dlg = QDialog(parent)
+    dlg.setWindowTitle(t("desktop.formulas"))
+    dlg.resize(900, 760)
+    lay = QVBoxLayout(dlg)
+    tb = QTextBrowser()
+    tb.setOpenExternalLinks(True)
+    tb.setHtml("".join(parts))
+    lay.addWidget(tb)
+    bb = QDialogButtonBox(QDialogButtonBox.Close)
+    bb.rejected.connect(dlg.reject)
+    lay.addWidget(bb)
+    dlg.exec()
+
+
+STYLE = """
+QMainWindow, QWidget#page, QScrollArea, QScrollArea > QWidget > QWidget#page { background: #f2f4f8; }
+QWidget#tabPage, QWidget#panelInner { background: white; }
+QLabel#pageTitle { font-size: 22px; font-weight: 700; color: #1d3557; }
+QLabel#pageIntro { color: #5b6270; }
+QLabel#panelTitle { font-size: 14px; font-weight: 700; color: #1d3557; }
+QFrame#panel { background: white; border: 1px solid #d9dee7; border-radius: 10px; }
+QGroupBox { background: white; border: 1px solid #d9dee7; border-radius: 10px; margin-top: 16px; padding: 10px 8px 8px 8px; }
+QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 4px; color: #1d3557; font-weight: 700; }
+QTabWidget::pane { border: 1px solid #d9dee7; border-radius: 8px; background: white; top: -1px; }
+QTabBar::tab { background: #e7ebf2; color: #39424e; padding: 7px 14px; margin-right: 2px;
+               border-top-left-radius: 6px; border-top-right-radius: 6px; }
+QTabBar::tab:selected { background: white; color: #1d4f91; font-weight: 700; }
+QTabBar::tab:hover:!selected { background: #dce3ee; }
+QTabWidget#mainTabs > QTabBar::tab { padding: 9px 22px; font-size: 14px; }
+QTabWidget#mainTabs > QTabBar::tab:selected { border-bottom: 3px solid #2a78d6; }
+QPushButton { background: #2a78d6; color: white; border: none; border-radius: 7px; padding: 8px 16px; font-weight: 600; }
+QPushButton:hover { background: #2367bb; }
+QPushButton:checked { background: #1d3557; }
+QPushButton:disabled { background: #b8c2d0; }
+QPushButton#secondary { background: white; color: #1d4f91; border: 1px solid #2a78d6; }
+QPushButton#secondary:hover { background: #eef4fc; }
+QComboBox, QDoubleSpinBox, QSpinBox { background: white; border: 1px solid #c9d0db; border-radius: 6px; padding: 3px 6px; min-height: 22px; }
+QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus { border: 1px solid #2a78d6; }
+QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: #f1f3f6; color: #9aa3af; }
+QHeaderView::section { background: #eef2f7; color: #1d3557; border: none; border-bottom: 1px solid #d9dee7; padding: 5px; font-weight: 700; }
+QTableWidget { background: white; border: 1px solid #d9dee7; border-radius: 6px; gridline-color: #eef0f3; }
+QTableWidget::item:selected { background: #d6e6fa; color: black; }
+QToolBar#topBar { background: #1d3557; border: none; padding: 6px 10px; spacing: 6px; }
+QToolBar#topBar QLabel { color: white; }
+QToolBar#topBar QLabel#appTitle { font-size: 16px; font-weight: 700; }
+QToolBar#topBar QComboBox, QToolBar#topBar QDoubleSpinBox { min-width: 70px; }
+QCheckBox, QRadioButton { spacing: 6px; }
+"""
 
 
 def save_bytes(parent: QWidget, title: str, filename: str, filt: str, data: bytes) -> str | None:

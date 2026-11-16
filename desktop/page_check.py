@@ -16,7 +16,7 @@ from oring_designer.i18n import family_label, render_check, t
 from oring_designer.sweep import summary_status, sweep, temperatures, to_frame, worst_by_family
 from oring_designer.thermal import ThermalDataError
 from oring_designer.tolerance import DEFAULT_MC_SAMPLES, Tolerance, monte_carlo, rss, worst_case
-from ui import (UNITS, Banner, Card, OptionalValue, Page, PlotHolder, StatusTable, Table, ToleranceEditor,
+from ui import (UNITS, Banner, Card, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, ToleranceEditor,
                 UnitSpin, add_row, combo, data_banner_text, dataset, heading, note, radio_row, result_rows,
                 save_bytes, status_text)
 
@@ -167,6 +167,17 @@ class CheckPage(Page):
         self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
         add_row(g, t("ui.pressure"), self.pressure)
         add_row(g, t("ui.fluid"), self.fluid)
+        self.T_min = UnitSpin("temp", 200.0)
+        self.T_max = UnitSpin("temp", 300.0)
+        self.T_step = UnitSpin("dtemp", 5.0)
+        self.mode = radio_row([(k, t(f"ui.mode_{k}")) for k in ("equilibrium", "lag")], "equilibrium")
+        self.delta = UnitSpin("dtemp", 10.0, signed=True)
+        add_row(g, t("ui.T_min"), self.T_min)
+        add_row(g, t("ui.T_max"), self.T_max)
+        add_row(g, t("ui.T_step"), self.T_step)
+        add_row(g, t("ui.mode"), self.mode)
+        add_row(g, t("ui.delta_T"), self.delta)
+        self.watch(self.T_min, self.T_max, self.T_step, self.mode, self.delta)
 
         g = self.group(t("ui.tp_limits"))
         self.tp = {}
@@ -174,16 +185,23 @@ class CheckPage(Page):
                             ("fill_hard_max", "ui.fill_hard_max_label"), ("stretch_max", "ui.out_stretch")):
             self.tp[name] = OptionalValue(UnitSpin("plain", 0.0, plain_range=(0.0, 1.0), decimals=3, step=0.01))
             add_row(g, t(label), self.tp[name])
-        self.tp_box = g.parentWidget()
-        self.form.addStretch(1)
 
         self.watch(self.seal, self.groove, self.temper, self.mating_on, self.mating, self.mating_delta, self.kind,
                    self.direction, self.full_ecc, self.ecc, self.hardness, self.swell, self.cs_method,
                    self.pressure, self.fluid, *self.tp.values())
 
         # ------------------------------------------------------------------ results
+        sm = self.summary
+        self.sweep_overall = StatusPill()
+        self.sweep_banner = Banner()
+        self.sweep_table = StatusTable()
+        sm.addWidget(self.sweep_overall)
+        sm.addWidget(self.sweep_banner)
+        sm.addWidget(heading(t("ui.results_sweep"), 13))
+        sm.addWidget(self.sweep_table)
+        sm.addStretch(1)
         self.tabs = Tabs()
-        self.results.addWidget(self.tabs)
+        self.details.addWidget(self.tabs)
         self._build_point(self.tabs.add(t("desktop.tab_point")))
         self._build_sweep(self.tabs.add(t("desktop.tab_sweep")))
         self._build_tol(self.tabs.add(t("desktop.tab_tol")))
@@ -209,29 +227,11 @@ class CheckPage(Page):
             lay.addWidget(w)
 
     def _build_sweep(self, lay: QVBoxLayout) -> None:
-        g = QGridLayout()
-        self.T_min = UnitSpin("temp", 200.0)
-        self.T_max = UnitSpin("temp", 300.0)
-        self.T_step = UnitSpin("dtemp", 5.0)
-        self.mode = radio_row([(k, t(f"ui.mode_{k}")) for k in ("equilibrium", "lag")], "equilibrium")
-        self.delta = UnitSpin("dtemp", 10.0, signed=True)
-        add_row(g, t("ui.T_min"), self.T_min)
-        add_row(g, t("ui.T_max"), self.T_max)
-        add_row(g, t("ui.T_step"), self.T_step)
-        add_row(g, t("ui.mode"), self.mode)
-        add_row(g, t("ui.delta_T"), self.delta)
-        g.setColumnStretch(2, 2)
-        lay.addLayout(g)
-        self.watch(self.T_min, self.T_max, self.T_step, self.mode, self.delta)
-        self.sweep_banner = Banner()
-        self.sweep_overall = heading("")
-        self.sweep_table = StatusTable()
         self.sweep_plot = PlotHolder()
         self.clear_plot = PlotHolder()
         btn = QPushButton(t("ui.download_csv"))
         btn.clicked.connect(self._save_csv)
-        for w in (self.sweep_banner, self.sweep_overall, heading(t("ui.results_sweep"), 13), self.sweep_table,
-                  self.sweep_plot, self.clear_plot, btn):
+        for w in (self.sweep_plot, self.clear_plot, btn):
             lay.addWidget(w)
         self._df = None
 
@@ -326,7 +326,7 @@ class CheckPage(Page):
             for c in (0, 1):
                 self.mg.itemAtPosition(r, c).widget().setVisible(on)
         tp = dataset().seal_materials[self.seal.currentData()].group == "thermoplastic"
-        self.tp_box.setVisible(tp)
+        self.set_group_visible(t("ui.tp_limits"), tp)
         self.side.setVisible(not face)
         self.clear_plot.setVisible(not face)
 
@@ -436,7 +436,7 @@ class CheckPage(Page):
         self.sweep_banner.show_text(data_banner_text(any(w.result.data_quality is not None and
                                                          w.result.data_quality.needs_warning for w in worst)
                                                      or df["no_data"].notna().any(), mats), "warn")
-        self.sweep_overall.setText(f"{t('ui.overall')}: {status_text(summary_status(pts))}")
+        self.sweep_overall.set_status(summary_status(pts))
         self.sweep_table.set_rows([(w.result.status, render_check(w.result),
                                     f"{U.fmt_T(w.T_housing_K)} / {U.fmt_T(w.T_seal_K)}") for w in worst])
         seal = ds.seal_materials[design.seal_material]

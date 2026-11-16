@@ -3,6 +3,7 @@ gland for each (desktop version of app/pages/3). Proposals are computed on deman
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QAbstractItemView, QCheckBox, QHBoxLayout, QPushButton, QSpinBox, QWidget
 
 from oring_designer.checks import run_checks
@@ -13,7 +14,7 @@ from oring_designer.i18n import render_check, t
 from oring_designer.selector import SelectorInput, select
 from oring_designer.sweep import sweep, temperatures, to_frame
 from oring_designer.thermal import ThermalDataError
-from ui import (UNITS, Banner, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row, combo,
+from ui import (UNITS, Banner, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row, combo,
                 data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
 
 STANDARDS = ["AS568", "ISO3601-1 A", "ISO3601-1 G"]
@@ -97,34 +98,40 @@ class SizePage(Page):
         self.run_btn.setStyleSheet("font-weight: 600; padding: 6px 14px;")
         self.run_btn.clicked.connect(self._compute)
         self.form.addWidget(self.run_btn)
-        self.form.addStretch(1)
 
         self.watch(self.kind, self.direction, self.D, self.cs_min, self.cs_max, *self.std.values(), self.seal,
                    self.groove, self.mating, self.pressure, self.hardness, self.fluid, self.T_min, self.T_max,
                    self.n_T, self.lag, self.tol_nom, self.tol_d, self.tol_w, self.tol_depth, self.cl_min, self.cl_max)
 
         # ------------------------------------------------------------------ results
-        r = self.results
+        sm = self.summary
         self.stale = Banner()
         self.warn = Banner()
-        r.addWidget(self.stale)
-        r.addWidget(self.warn)
-        r.addWidget(heading(t("ui.proposals")))
+        sm.addWidget(self.stale)
+        sm.addWidget(self.warn)
+        sm.addWidget(heading(t("ui.proposals"), 13))
         self.table = Table()
+        self.table.fit = False
+        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table.setMinimumHeight(170)
+        self.table.setMaximumHeight(250)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.itemSelectionChanged.connect(self._show_detail)
-        r.addWidget(self.table)
+        sm.addWidget(self.table)
+        self.status = StatusPill()
+        sm.addWidget(self.status)
+        self.banner = Banner()
+        sm.addWidget(self.banner)
+        self.checks = StatusTable()
+        sm.addWidget(self.checks)
+        sm.addStretch(1)
+
+        r = self.details
         self.detail_title = heading("")
         r.addWidget(self.detail_title)
         self.dims = Table()
         r.addWidget(self.dims)
-        self.banner = Banner()
-        r.addWidget(self.banner)
-        self.status = heading("", 13)
-        r.addWidget(self.status)
-        self.checks = StatusTable()
-        r.addWidget(self.checks)
         self.plot = PlotHolder()
         r.addWidget(self.plot)
         r.addWidget(heading(t("ui.section")))
@@ -303,7 +310,7 @@ class SizePage(Page):
         mats = (p.design.seal_material, p.design.groove_material)
         self.banner.show_text(data_banner_text(any(r.data_quality is not None and r.data_quality.needs_warning
                                                    for r in worst), mats), "warn")
-        self.status.setText(f"{t('ui.wc_checks')}: {status_text(p.status)}")
+        self.status.set_status(p.status, f"{p.size} — {t('ui.wc_checks')}")
         order = {"FAIL": 0, "WARN": 1, "PASS": 2}
         self.checks.set_rows([(r.status, render_check(r), None) for r in sorted(worst, key=lambda r: order[r.status.value])])
 

@@ -104,3 +104,22 @@ def test_check_page_report_and_dxf(window):
     page._run()
     assert to_pdf(build_report(page._report, dataset())).startswith(b"%PDF")
     assert b"SECTION" in to_bytes(gland_profile(page._design, "mm", ""))
+
+
+def test_formulas_dialog_and_details_toggle(window, monkeypatch):
+    from PySide6.QtWidgets import QDialog
+
+    import ui
+
+    shown = {}
+    monkeypatch.setattr(QDialog, "exec", lambda self: shown.setdefault("dlg", self))
+    ui.show_formulas(window)
+    from PySide6.QtWidgets import QTextBrowser
+
+    text = shown["dlg"].findChild(QTextBrowser).toPlainText()
+    assert "W'² · (D_temas + W') = W² · (ID + W)" in text and "F_basınç" in text
+    page = window.pages[0]
+    assert page.details_widget.isHidden()
+    page.details_btn.setChecked(True)
+    assert not page.details_widget.isHidden()
+    page.details_btn.setChecked(False)

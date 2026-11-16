@@ -17,8 +17,11 @@ var job windows.Handle // kept open for the launcher's lifetime; closing it kill
 
 func pythonPath(root string) string { return filepath.Join(root, "python", "pythonw.exe") }
 
+// hideWindow only suppresses a console. It must NOT set HideWindow: that passes SW_HIDE in
+// STARTUPINFO, and Windows applies it to the program's first top-level window, so the Qt
+// main window would open invisible.
 func hideWindow(c *exec.Cmd) {
-	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
+	c.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNoWindow}
 }
 
 // bindToLauncher puts the server in a job object that is killed when the launcher exits,

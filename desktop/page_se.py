@@ -9,14 +9,13 @@ from oring_designer.export.figures import se_fig
 from oring_designer.i18n import render_check, t
 from oring_designer.spring_energized import SeDesign, SeGland, SeLimits, SeSeal, se_frame, se_sweep
 from oring_designer.sweep import summary_status, temperatures, worst_by_family
-from ui import (UNITS, Banner, OptionalValue, Page, PlotHolder, StatusTable, UnitSpin, add_row, combo,
+from ui import (UNITS, Banner, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, UnitSpin, add_row, combo,
                 data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
 
 
 class SpringPage(Page):
     def __init__(self):
-        super().__init__(t("ui.page_se"), t("ui.se_intro"))
-        self.form.addWidget(note(t("ui.se_example_note")))
+        super().__init__(t("ui.page_se"), t("ui.se_intro") + " " + t("ui.se_example_note"))
         ds = dataset()
 
         g = self.group(t("ui.materials"))
@@ -88,20 +87,23 @@ class SpringPage(Page):
         for label, w in ((t("ui.T_min"), self.T_min), (t("ui.T_max"), self.T_max), (t("ui.T_step"), self.step),
                          (t("ui.mode"), self.mode), (t("ui.delta_T"), self.delta)):
             add_row(g, label, w)
-        self.form.addStretch(1)
         self.watch(self.jacket, self.groove, self.mating, self.mating_delta, self.kind, self.direction, *self.v.values(),
                    self.width, self.full_ecc, self.h, self.b, *self.d_static.values(), self.cmin, self.cmax, self.gmax,
                    self.axmin, self.fit, self.T_min, self.T_max, self.step, self.mode, self.delta)
 
-        r = self.results
+        sm = self.summary
+        self.overall = StatusPill()
         self.banner = Banner()
-        self.overall = heading("")
         self.table = StatusTable()
+        for w in (self.overall, self.banner, heading(t("ui.se_results"), 13), self.table):
+            sm.addWidget(w)
+        sm.addStretch(1)
+        r = self.details
         self.plot = PlotHolder()
         btn = QPushButton(t("ui.download_csv"))
         btn.clicked.connect(self._save_csv)
-        for w in (self.banner, self.overall, heading(t("ui.se_results"), 13), self.table, self.plot, btn):
-            r.addWidget(w)
+        r.addWidget(self.plot)
+        r.addWidget(btn)
         self._df = None
         self.schedule()
 
@@ -167,7 +169,7 @@ class SpringPage(Page):
         mats = (design.jacket_material, design.groove_material) + ((mating,) if mating else ())
         self.banner.show_text(data_banner_text(df["no_data"].notna().any() or any(
             w.result.data_quality is not None and w.result.data_quality.needs_warning for w in worst), mats), "warn")
-        self.overall.setText(f"{t('ui.overall')}: {status_text(summary_status(pts))}")
+        self.overall.set_status(summary_status(pts))
         self.table.set_rows([(w.result.status, render_check(w.result), f"{U.fmt_T(w.T_housing_K)} / {U.fmt_T(w.T_seal_K)}")
                              for w in worst])
         self.plot.set_figure(se_fig(df, U.T, U.L, (self.cmin.si(), self.cmax.si()), None if face else self.gmax.si()))

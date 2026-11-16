@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QLabel, QMainWindow, QMe
                                QTabWidget, QToolBar, QWidget)
 
 from oring_designer.i18n import t  # noqa: E402
-from ui import T_LABEL, UNITS, UnitSpin  # noqa: E402
 
 APP_ICON = HERE / "assets" / "icon.png"
 
@@ -42,6 +41,7 @@ class MainWindow(QMainWindow):
         from page_check import CheckPage
         from page_se import SpringPage
         from page_size import SizePage
+        from ui import T_LABEL, UNITS, UnitSpin
 
         self.setWindowTitle(t("app.title"))
         if APP_ICON.exists():
@@ -49,8 +49,16 @@ class MainWindow(QMainWindow):
         self.resize(1440, 920)
 
         bar = QToolBar(t("ui.units"))
+        bar.setObjectName("topBar")
         bar.setMovable(False)
         self.addToolBar(bar)
+        title = QLabel(f"  ◯  {t('app.title')}")
+        title.setObjectName("appTitle")
+        bar.addWidget(title)
+        spacer = QWidget()
+        from PySide6.QtWidgets import QSizePolicy
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        bar.addWidget(spacer)
         bar.addWidget(QLabel(f"  {t('ui.length_unit')}: "))
         self.len_box = QComboBox()
         self.len_box.addItems(["mm", "in"])
@@ -74,15 +82,17 @@ class MainWindow(QMainWindow):
         self.T_ref.edited.connect(self._t_ref)
 
         self.tabs = QTabWidget()
+        self.tabs.setObjectName("mainTabs")
         self.tabs.setDocumentMode(True)
         self.pages = [CalcPage(), CheckPage(), SizePage(), SpringPage()]
         for page, key in zip(self.pages, ("ui.page_calc", "ui.page_check", "ui.page_size", "ui.page_se")):
             self.tabs.addTab(scroll(page), t(key))
         self.setCentralWidget(self.tabs)
         UNITS.changed.connect(self._refresh_all)
+        self._units = UNITS
 
     def _t_ref(self) -> None:
-        UNITS.T_ref_K = self.T_ref.si()
+        self._units.T_ref_K = self.T_ref.si()
         self._refresh_all()
 
     def _refresh_all(self) -> None:
@@ -119,8 +129,21 @@ def main() -> int:
     f = QFont("Segoe UI", 10) if sys.platform == "win32" else app.font()
     app.setFont(f)
     sys.excepthook = _excepthook
+    from PySide6.QtGui import QPixmap
+    from PySide6.QtWidgets import QSplashScreen
+
+    pm = QPixmap(520, 200)
+    pm.fill(Qt.white)
+    splash = QSplashScreen(pm)
+    splash.showMessage(f"\n\n{t('app.title')}\n\n{t('desktop.starting')}", Qt.AlignCenter, Qt.black)
+    splash.show()
+    app.processEvents()
+    from ui import STYLE
+
+    app.setStyleSheet(STYLE)
     win = MainWindow()
-    win.show()
+    win.showMaximized()
+    splash.finish(win)
     return app.exec()
 
 

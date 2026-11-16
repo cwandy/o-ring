@@ -12,7 +12,7 @@ from oring_designer.gland_types import ThermalState
 from oring_designer.groove_calc import GrooveInput, TemperatureRangeError, calculate
 from oring_designer.i18n import render_check, t, t_list
 from oring_designer.thermal import ThermalDataError
-from ui import (UNITS, Banner, Card, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row,
+from ui import (UNITS, Banner, Card, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row,
                 combo, data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
 
 CS_STD = [("AS568", v) for v in (1.78, 2.62, 3.53, 5.33, 6.99)] + [("ISO 3601", v) for v in (1.80, 2.65, 3.55, 5.30, 7.00)]
@@ -73,25 +73,31 @@ class CalcPage(Page):
             add_row(g, label, w)
         self.stretch_row = add_row(g, t("ui.install_stretch_opt"), self.stretch)
         self.optg = g
-        self.form.addStretch(1)
 
         self.watch(self.seal, self.housing, self.temper, self.cs_std, self.cs_custom, self.gland, self.direction,
                    self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.fluid, self.tmin,
                    self.tmax, self.fill_lim, self.cs_tol, self.depth_tol, self.width_tol, self.stretch)
 
         # ------------------------------------------------------------------ results
-        r = self.results
+        sm = self.summary
+        self.overall = StatusPill()
         self.banner = Banner()
         self.notes = Banner()
-        r.addWidget(self.banner)
-        r.addWidget(self.notes)
+        sm.addWidget(self.overall)
+        sm.addWidget(self.banner)
+        sm.addWidget(self.notes)
         grid = QGridLayout()
+        grid.setSpacing(6)
         self.cards = [Card() for _ in range(8)]
         for i, c in enumerate(self.cards):
-            grid.addWidget(c, i // 4, i % 4)
-        r.addLayout(grid)
-        self.overall = heading("")
-        r.addWidget(self.overall)
+            grid.addWidget(c, i // 2, i % 2)
+        sm.addLayout(grid)
+        sm.addWidget(heading(t("ui.calc_checks"), 13))
+        self.checks = StatusTable()
+        sm.addWidget(self.checks)
+        sm.addStretch(1)
+
+        r = self.details
         r.addWidget(heading(t("ui.section_title_calc")))
         self.side = radio_row([(k, t(f"plots.side_{k}")) for k in ("nominal", "tight", "wide")], "nominal")
         self.watch(self.side)
@@ -118,9 +124,6 @@ class CalcPage(Page):
         self.csv_btn = QPushButton(t("ui.download_csv"))
         self.csv_btn.clicked.connect(self._save_csv)
         r.addWidget(self.csv_btn)
-        r.addWidget(heading(t("ui.calc_checks")))
-        self.checks = StatusTable()
-        r.addWidget(self.checks)
         r.addWidget(heading(t("ui.method")))
         r.addWidget(note("\n".join(f"• {x}" for x in t_list("ui.method_items"))))
         self._per_T = None
@@ -231,7 +234,7 @@ class CalcPage(Page):
         c[7].set(t("ui.kpi_volume"), f"{lo_row.volume_change:+.2%}",
                  t("ui.cap_volume", Tlo=U.fmt_T(lo_row.T_K), vlo=lo_row.volume_change, Thi=U.fmt_T(hi_row.T_K),
                    vhi=hi_row.volume_change))
-        self.overall.setText(f"{t('ui.overall')}: {status_text(res.status)}")
+        self.overall.set_status(res.status)
 
         gap_txt = f"{Ln(res.clearance_m[0])}–{Ln(res.clearance_m[1])}" if res.clearance_m else None
         self.schematic.show_gland(sketch, {
