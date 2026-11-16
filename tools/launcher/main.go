@@ -1,12 +1,12 @@
 // O-Ring.exe: starts the program and shows it in its own window.
 //
-// 1. Picks a free local port and starts the bundled Python
-//    (python\python.exe -m streamlit run app\streamlit_app.py) without a console window;
-//    its output goes to a log file in the user's local application data folder.
-// 2. Opens Microsoft Edge (or Chrome) in "app" mode: a plain window without tabs or address
-//    bar, with a throw-away profile. A local start page waits until the server answers.
-// 3. When that window is closed, the server is stopped. The server is also tied to the
-//    launcher by a Windows job object, so it never outlives it.
+//  1. Picks a free local port and starts the bundled Python
+//     (python\python.exe -m streamlit run app\streamlit_app.py) without a console window;
+//     its output goes to a log file in the user's local application data folder.
+//  2. Opens Microsoft Edge (or Chrome) in "app" mode: a plain window without tabs or address
+//     bar, with a throw-away profile. A local start page waits until the server answers.
+//  3. When that window is closed, the server is stopped. The server is also tied to the
+//     launcher by a Windows job object, so it never outlives it.
 //
 // Without Edge/Chrome the default browser is used and a message box keeps the program
 // running until "OK" is pressed. Nothing is installed and no administrator rights are needed.
