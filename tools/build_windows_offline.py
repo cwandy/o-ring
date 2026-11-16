@@ -7,12 +7,13 @@ and double-click ``Baslat.bat``. Contents:
     python/            Python embeddable distribution (python.org) + Lib/site-packages
     src/ data/ app/    the program, its data files and the Streamlit app
     .streamlit/        Streamlit config (no usage statistics, no e-mail prompt)
-    Baslat.bat         starts the app and opens the browser
+    O-Ring.exe         starts the app in its own window (Edge/Chrome app mode), see tools/launcher
+    Baslat.bat         fallback: starts the app and opens the default browser
     BENIOKU.txt        short Turkish instructions
 
 Dependencies are the exact versions pinned in uv.lock, installed as Windows wheels
-(win_amd64, cp313) with ``uv pip install --target``. Run from the repository root (needs
-internet and uv):
+(win_amd64, cp313) with ``uv pip install --target``. O-Ring.exe is cross-compiled from
+tools/launcher with Go (GOOS=windows). Run from the repository root (needs internet, uv and go):
 
     uv run python tools/build_windows_offline.py [--python 3.13.17] [--out dist]
 """
@@ -21,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -50,6 +52,9 @@ address = "127.0.0.1"
 headless = true
 fileWatcherType = "none"
 
+[client]
+toolbarMode = "minimal"
+
 [global]
 developmentMode = false
 """
@@ -66,18 +71,24 @@ Program hicbir sey kurmaz ve kayit defterine yazmaz; her sey bu klasorun icinden
 2. ZIP dosyasini KENDI kullanici klasorunuzde yazma izniniz olan bir yere cikarin,
    ornegin Belgeler veya C:\Users\<adiniz>\o-ring. (C:\Program Files gibi yonetici
    isteyen klasorlere cikarmayin.) Yol cok uzun olmamali.
-3. o-ring klasorundeki "Baslat.bat" dosyasina cift tiklayin.
-4. Siyah bir pencere acilir ve birkac saniye sonra tarayicida program acilir
-   (http://127.0.0.1:8501). Acilmazsa bu adresi tarayiciya elle yazin.
-5. Programi kapatmak icin siyah pencereyi kapatin.
+3. o-ring klasorundeki "O-Ring.exe" dosyasina cift tiklayin. Isterseniz sag tik >
+   "Gonder" > "Masaustu (kisayol olustur)" ile masaustune kisayol koyabilirsiniz.
+4. Kendi penceresinde "Baslatiliyor" ekrani acilir; birkac saniye sonra program gelir.
+   Pencere Microsoft Edge (yoksa Chrome) ile cizilir ama adres cubugu/sekme yoktur ve
+   internete baglanmaz.
+5. Programi kapatmak icin pencereyi kapatin; arka plandaki hesap sunucusu da kapanir.
 
 Notlar
+- O-Ring.exe calismazsa (ornegin kurum politikasi .exe'yi engelliyorsa) "Baslat.bat"
+  ayni programi varsayilan tarayicida acar; kapatmak icin siyah pencereyi kapatin.
+- Edge/Chrome bulunamazsa program varsayilan tarayicida acilir ve bir bilgi kutusu
+  cikar; programi kapatmak icin o kutuda Tamam'a basin.
+- Hata olursa kayit dosyasi: %LOCALAPPDATA%\o-ring\son_calisma.log
 - Program yalnizca bu bilgisayardan erisilebilir (127.0.0.1); bu nedenle Windows
   Guvenlik Duvari izin sormamalidir. Sorarsa "Iptal" demeniz yeterlidir.
 - Windows SmartScreen "bilinmeyen yayinci" uyarisi verirse: "Ek bilgi" > "Yine de calistir".
 - Kurumunuzun BT politikasi (AppLocker vb.) kullanici klasorlerinden program
   calistirmayi tamamen engelliyorsa paket calismaz; bu durumda BT birimine danisin.
-- 8501 portu doluysa Baslat.bat icindeki 8501 sayilarini (iki yer) baska bir sayiyla degistirin.
 - Veri dosyalari (malzemeler, kurallar, standart olculer) "data" klasorundedir.
 
 Python {py} (python.org embeddable, SHA-256 {sha}) ve uv.lock'taki surumler kullanilmistir.
@@ -131,6 +142,9 @@ def main() -> int:
     (stage / ".streamlit").mkdir()
     (stage / ".streamlit" / "config.toml").write_text(CONFIG, encoding="utf-8")
     (stage / "Baslat.bat").write_bytes(BAT.replace("\n", "\r\n").encode("ascii"))
+    run(["go", "build", "-trimpath", "-ldflags", "-H=windowsgui -s -w", "-o", str(stage / "O-Ring.exe"), "."],
+        cwd=ROOT / "tools" / "launcher", env={**os.environ, "GOOS": "windows", "GOARCH": "amd64",
+                                              "CGO_ENABLED": "0"})
     (stage / "BENIOKU.txt").write_bytes(README.format(py=py, sha=sha).replace("\n", "\r\n").encode("utf-8"))
     for extra in ("SPEC.md", "README.md"):
         shutil.copy(ROOT / extra, stage / extra)

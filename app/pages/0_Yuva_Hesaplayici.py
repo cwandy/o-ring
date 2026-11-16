@@ -11,7 +11,8 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import data_banner, dataset, sidebar_units, status_label, status_table
+from common import (data_banner, dataset, input_layout, show_schematic, sidebar_units, status_label,
+                    status_table)
 from design_form import UnitInputs
 from oring_designer import units
 from oring_designer.checks import Status, run_checks
@@ -41,8 +42,9 @@ def Lnum(x_m: float) -> str:
 
 
 # --------------------------------------------------------------------------- inputs
-with st.container(border=True):
-    c1, c2, c2b = st.columns(3)
+left, slot = input_layout()
+with left, st.container(border=True):
+    c1, c2 = st.columns(2)
     with c1:
         seal_ids = list(ds.seal_materials)
         seal_id = st.selectbox(t("ui.seal_material"), seal_ids, index=seal_ids.index("vmq"),
@@ -52,7 +54,6 @@ with st.container(border=True):
         housing_ids = list(ds.housing_materials)
         housing_id = st.selectbox(t("ui.housing_material"), housing_ids, index=housing_ids.index("ss304"),
                                   format_func=lambda k: ds.housing_materials[k].name)
-    with c2b:
         st.selectbox(t("ui.temper"), [x.id for x in ds.housing_materials[housing_id].tempers],
                      format_func=lambda k: next(x.name for x in ds.housing_materials[housing_id].tempers
                                                 if x.id == k), key=f"calc_temper_{housing_id}")
@@ -71,7 +72,7 @@ with st.container(border=True):
         cs_m = ui.length(t("ui.cs_custom_value"), 2.5, "calc_cs_custom")
     else:
         cs_m = float(choice.split()[-1]) * 1e-3
-    r1, r2, r3, r4 = st.columns(4)
+    r1, r2 = st.columns(2)
     with r1:
         gland = st.segmented_control(t("ui.gland_type"), ["face", "radial"], default="face",
                                      format_func=lambda k: t(f"ui.gland_{k}"), key="calc_gland") or "face"
@@ -79,15 +80,13 @@ with st.container(border=True):
         if gland == "face":
             direction = st.radio(t("ui.pressure_direction"), ["internal", "external"], horizontal=True,
                                  format_func=lambda k: t(f"ui.{k}"), key="calc_dir")
-    with r2:
-        T_lo = ui.temperature(t("ui.T_low"), 220.0, "calc_T_lo")
-    with r3:
-        T_hi = ui.temperature(t("ui.T_high"), 300.0, "calc_T_hi")
-    with r4:
         p_disp = st.number_input(f"{t('ui.pressure')} [{ui.P_UNIT}]",
                                  value=round(units.pressure_from_Pa(50e5, ui.P_UNIT), 3), min_value=0.0,
                                  key=f"calc_p_{ui.P_UNIT}")
         pressure = units.pressure_to_Pa(p_disp, ui.P_UNIT)
+    with r2:
+        T_lo = ui.temperature(t("ui.T_low"), 220.0, "calc_T_lo")
+        T_hi = ui.temperature(t("ui.T_high"), 300.0, "calc_T_hi")
         hardness = st.number_input(t("ui.hardness"), value=70.0, min_value=50.0, max_value=90.0, step=5.0,
                                    key="calc_hard") if is_elastomer else None
 
@@ -115,6 +114,10 @@ with st.container(border=True):
         if gland == "radial":
             stretch = e1.number_input(t("ui.install_stretch_opt"), value=0.0, min_value=0.0, max_value=0.05,
                                       step=0.005, format="%.3f", key="calc_stretch")
+
+SKETCH = "face" if gland == "face" else "piston"  # radial gland drawn as a piston groove
+show_schematic(slot, SKETCH, {"depth": "…", "width": "…", "radius": "…", "cs": ui.num_L(cs_m, cs_tol),
+                              "ring_id": ui.num_L(ring_id)}, LU, direction)
 
 target = (tmin, tmax) if tmin is not None and tmax is not None and tmin < tmax else None
 _grp_rules = ds.rule_set(ds.seal_materials[seal_id].group,
@@ -195,6 +198,15 @@ k8.caption(t("ui.cap_volume", Tlo=ui.fmt_T(lo_row.T_K), vlo=lo_row.volume_change
              vhi=hi_row.volume_change))
 
 st.markdown(f"**{t('ui.overall')}: {status_label(res.status)}**")
+gap_txt = None
+if res.clearance_m is not None:
+    gap_txt = f"{ui.num_L(res.clearance_m[0])}–{ui.num_L(res.clearance_m[1])}"
+show_schematic(slot, SKETCH, {
+    "depth": ui.num_L(res.depth_m, res.depth_tol_m),
+    "width": f"{ui.num_L(res.width_m)} +{ui.num_L(res.width_tol_m)}/0",
+    "radius": ui.num_L(res.radius_m), "cs": ui.num_L(cs_m, res.cs_tol_m), "gap": gap_txt,
+    "machine_depth": ui.num_L(res.machine_depth_m) if gland == "radial" else None,
+    "ring_id": ui.num_L(ring_id)}, LU, direction)
 
 # --------------------------------------------------------------------------- gauges + section
 g1, g2 = st.columns(2)

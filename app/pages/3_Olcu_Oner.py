@@ -10,7 +10,8 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import (data_banner, dataset, outputs_section, section_view, sidebar_units, status_label,
+from common import (data_banner, dataset, input_layout, outputs_section, section_view, show_schematic,
+                    sidebar_units, status_label,
                     status_table)
 from oring_designer.export.report import ReportInput
 from design_form import UnitInputs
@@ -31,7 +32,10 @@ INCH = ui.L_UNIT == "in"
 # --------------------------------------------------------------------------- inputs
 elastomers = [k for k, m in ds.seal_materials.items() if m.group == "elastomer"]
 housing_ids = list(ds.housing_materials)
-c1, c2, c3 = st.columns(3)
+left, slot = input_layout()
+with left:
+    c1, c2 = st.columns(2)
+c3 = c1  # sweep inputs continue below the gland inputs
 with c1:
     st.subheader(t("ui.gland"))
     kind = st.radio(t("ui.gland_type"), ["piston", "rod", "face"], horizontal=True,
@@ -81,6 +85,11 @@ with c3:
         if kind != "face" and st.checkbox(t("ui.clearance_override")):
             clearance = (ui.length(t("ui.clearance_min"), 0.05, "sel_cmin"),
                          ui.length(t("ui.clearance_max"), 0.10, "sel_cmax"))
+
+# schematic with the given diameter until a proposal is chosen
+_known = {"piston": "bore", "rod": "rod"}.get(kind) or ("groove_od" if direction == "internal" else "groove_id")
+show_schematic(slot, kind, {_known: ui.num_L(D), "width": "…", "depth": "…", "cs": "…", "ring_id": "…"},
+               ui.L_UNIT, direction)
 
 inp = SelectorInput(
     gland_type=kind, nominal_diameter_m=D, seal_material=seal_id, groove_material=groove_id,
@@ -175,6 +184,31 @@ dims.append({t("ui.col_dim"): t("ui.corner_radius"), t("ui.col_value"): ui.fmt_L
 if p.clearance_m is not None:
     dims.append({t("ui.col_dim"): t("ui.diametral_clearance_nom"),
                  t("ui.col_value"): ui.fmt_L(p.clearance_m), t("ui.col_tol"): "–"})
+def tnum(field: str, value: float) -> str:
+    tv = tol.get(f"gland.{field}")
+    v = ui.num_L(value)
+    if tv is None:
+        return v
+    if tv.lower_m == 0:
+        return f"{v} +{ui.num_L(tv.upper_m)}/0"
+    return f"{v} ±{ui.num_L(tv.upper_m)}"
+
+
+if kind == "piston":
+    sk = {"bore": tnum("bore_diameter_m", g.bore_diameter_m), "piston": tnum("piston_diameter_m", g.piston_diameter_m),
+          "groove_d": tnum("groove_diameter_m", g.groove_diameter_m)}
+elif kind == "rod":
+    sk = {"rod": tnum("rod_diameter_m", g.rod_diameter_m), "throat": tnum("throat_diameter_m", g.throat_diameter_m),
+          "groove_d": tnum("groove_diameter_m", g.groove_diameter_m)}
+else:
+    sk = {"groove_id": tnum("groove_id_m", g.groove_id_m), "groove_od": tnum("groove_od_m", g.groove_od_m)}
+sk["width"] = tnum("groove_width_m", g.groove_width_m) if kind != "face" else ui.num_L(
+    (g.groove_od_m - g.groove_id_m) / 2)
+sk["depth"] = tnum("groove_depth_m", g.groove_depth_m) if kind == "face" else ui.num_L(p.depth_m)
+sk |= {"radius": ui.num_L(p.radius_m), "gap": ui.num_L(p.clearance_m),
+       "cs": ui.num_L(p.ring.cs_m, p.ring_tol[1]), "ring_id": ui.num_L(p.ring.id_m, p.ring_tol[0])}
+show_schematic(slot, kind, sk, ui.L_UNIT, direction)
+
 st.markdown(f"**{t('ui.gland_dims')}** — {p.size}: {pm(p.ring.id_m, p.ring_tol[0])} × "
             f"{pm(p.ring.cs_m, p.ring_tol[1])}")
 st.table(pd.DataFrame(dims).style.hide(axis="index"))

@@ -8,6 +8,7 @@ import streamlit as st
 from oring_designer.checks import CheckResult, Status
 from oring_designer.i18n import render_check, t
 from oring_designer.loader import Dataset, load_dataset
+from oring_designer.viz.schematic import gland_schematic
 
 STATUS_STYLE = {  # dataviz status palette; always shown with icon + label
     "PASS": ("✅", "rgba(12, 163, 12, 0.18)"),
@@ -28,6 +29,20 @@ def sidebar_units() -> dict[str, str]:
                             format_func=lambda u: {"degC": "°C", "K": "K", "degF": "°F"}[u])
     pressure = st.sidebar.radio(t("ui.pressure_unit"), ["bar", "MPa", "psi"], horizontal=True)
     return {"length": length, "temp": temp, "pressure": pressure}
+
+
+def input_layout():
+    """Inputs on the left, the gland schematic on the right; results go below (full width)."""
+    left, right = st.columns([1, 1], gap="large")
+    return left, right.empty()
+
+
+def show_schematic(slot, kind: str, dims: dict[str, str | None], unit: str,
+                   direction: str = "internal", seal: str = "oring") -> None:
+    """Draw (or redraw) the dimensioned gland schematic into ``slot`` (an ``st.empty``)."""
+    with slot.container(border=True):
+        st.markdown(f"**{t('schematic.heading')}**")
+        st.image(gland_schematic(kind, dims, unit, direction, seal), width="stretch")
 
 
 def status_label(status: Status | str) -> str:

@@ -12,6 +12,8 @@ from oring_designer.gland_types import FaceGland, ORing, PistonGland, RodGland
 from oring_designer.i18n import t
 from oring_designer.loader import Dataset
 
+from common import input_layout, show_schematic
+
 
 class UnitInputs:
     """Number inputs in the user's display units; values returned in SI."""
@@ -46,6 +48,16 @@ class UnitInputs:
     def fmt_T(self, T_K: float) -> str:
         return f"{units.temperature_from_K(T_K, self.T_UNIT):.1f} {self.T_LABEL}"
 
+    def num_L(self, L_m: float | None, tol_m: float | None = None) -> str | None:
+        """Length as a number in the display unit (no unit text), optionally ``± tol``."""
+        if L_m is None:
+            return None
+        nd = 3 if self.L_UNIT == "mm" else 4
+        txt = f"{units.length_from_m(L_m, self.L_UNIT):.{nd}f}"
+        if tol_m:
+            txt += f" ±{units.length_from_m(tol_m, self.L_UNIT):.{nd}f}"
+        return txt
+
     def fmt_L(self, L_m: float) -> str:
         v = units.length_from_m(L_m, self.L_UNIT)
         return f"{v:.3f} mm" if self.L_UNIT == "mm" else f"{v:.4f} in"
@@ -65,7 +77,10 @@ def design_form(ds: Dataset, ui: UnitInputs) -> FormResult:
     # --------------------------------------------------------------------------- inputs
     seal_ids = list(ds.seal_materials)
     housing_ids = list(ds.housing_materials)
-    c1, c2, c3 = st.columns(3)
+    left, slot = input_layout()
+    with left:
+        c1, c2 = st.columns(2)
+    c3 = c1  # O-ring and operating inputs continue below the materials
 
     with c1:
         st.subheader(t("ui.materials"))
@@ -141,6 +156,19 @@ def design_form(ds: Dataset, ui: UnitInputs) -> FormResult:
         gland = RodGland(rod, throat, groove, width, radius, ecc)
     else:
         gland = FaceGland(gid, god, depth, direction, radius)
+
+    num = ui.num_L
+    if kind == "piston":
+        dims = {"bore": num(bore), "piston": num(piston_d), "groove_d": num(groove), "width": num(width),
+                "depth": num((bore - groove) / 2), "gap": num(bore - piston_d), "radius": num(radius)}
+    elif kind == "rod":
+        dims = {"rod": num(rod), "throat": num(throat), "groove_d": num(groove), "width": num(width),
+                "depth": num((groove - rod) / 2), "gap": num(throat - rod), "radius": num(radius)}
+    else:
+        dims = {"groove_id": num(gid), "groove_od": num(god), "width": num((god - gid) / 2),
+                "depth": num(depth), "radius": num(radius)}
+    dims |= {"cs": num(ring_cs), "ring_id": num(ring_id)}
+    show_schematic(slot, kind, dims, L_UNIT, direction if kind == "face" else "internal")
 
     design = Design(gland=gland, oring=ORing(ring_id, ring_cs), seal_material=seal_id,
                     groove_material=groove_id, mating_material=mating_id, pressure_Pa=pressure,

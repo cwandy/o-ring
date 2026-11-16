@@ -9,7 +9,8 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # app/ for `common`
 
-from common import data_banner, dataset, sidebar_units, status_label, status_table
+from common import (data_banner, dataset, input_layout, show_schematic, sidebar_units, status_label,
+                    status_table)
 from design_form import UnitInputs
 from oring_designer.i18n import render_check, t
 from oring_designer.spring_energized import SeDesign, SeGland, SeLimits, SeSeal, se_frame, se_sweep
@@ -34,7 +35,10 @@ def optional(label: str, default_mm: float, key: str) -> float | None:
     return None
 
 
-c1, c2, c3 = st.columns(3)
+left, slot = input_layout()
+with left:
+    c1, c2 = st.columns(2)
+c3 = c2  # seal and limit inputs continue below the gland inputs
 with c1:
     st.subheader(t("ui.materials"))
     jacket = st.selectbox(t("ui.jacket_material"), jackets, format_func=lambda k: ds.seal_materials[k].name)
@@ -92,6 +96,18 @@ with c3:
     fit_min = None
     if st.checkbox(f"{t('ui.se_fit_min')} — {t('ui.enter_limit')}", key="chk_fit"):
         fit_min = st.number_input(t("ui.se_fit_min"), value=0.0, format="%.4f", key="se_fit_min")
+
+num = ui.num_L
+if kind == "piston":
+    sk = {"bore": num(mate), "piston": num(part), "groove_d": num(groove), "depth": num((mate - groove) / 2),
+          "gap": num(mate - part)}
+elif kind == "rod":
+    sk = {"rod": num(mate), "throat": num(part), "groove_d": num(groove), "depth": num((groove - mate) / 2),
+          "gap": num(part - mate)}
+else:
+    sk = {("groove_od" if direction == "internal" else "groove_id"): num(groove), "depth": num(depth)}
+sk |= {"width": num(width), "seal_h": num(h), "seal_b": num(b), "static_d": num(d_static)}
+show_schematic(slot, kind, sk, ui.L_UNIT, direction, seal="spring")
 
 design = SeDesign(
     gland=SeGland(kind, mate, part, groove, width, depth, direction, ecc),

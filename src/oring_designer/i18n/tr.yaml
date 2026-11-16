@@ -411,6 +411,28 @@ ui:
     - "Kuvvet: Parker Şekil 2-4…2-8 sıkıştırma kuvveti (oda sıcaklığı); flanş sıkma kuvveti = sıkıştırma + p·π·D²/4."
   tol_error: "Tolerans analizi yapılamadı: {error}"
 
+schematic:
+  pressure: "Basınç"
+  not_to_scale: "Şematik, ölçekli değildir"
+  heading: "Yuva şeması"
+  bore: "Silindir iç çapı"
+  piston: "Piston dış çapı"
+  groove_d: "Yuva taban çapı"
+  rod: "Mil çapı"
+  throat: "Boğaz (delik) çapı"
+  groove_id: "Yuva iç çapı"
+  groove_od: "Yuva dış çapı"
+  width: "Yuva genişliği"
+  depth: "Yuva derinliği"
+  machine_depth: "İşleme derinliği"
+  radius: "Taban köşe radyüsü"
+  cs: "O-ring kesiti"
+  ring_id: "O-ring iç çapı"
+  gap: "Çapsal boşluk"
+  seal_h: "Serbest yükseklik"
+  seal_b: "Conta genişliği"
+  static_d: "Statik oturma çapı"
+
 families:
   temp_low: "Düşük sıcaklık"
   temp_high: "Yüksek sıcaklık"
