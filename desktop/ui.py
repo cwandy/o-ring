@@ -97,7 +97,8 @@ class UnitSpin(QDoubleSpinBox):
         self.setKeyboardTracking(False)
         self.setAlignment(Qt.AlignRight)
         self.setMinimumWidth(86)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setMaximumWidth(118)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self._refresh()
         self.valueChanged.connect(self._on_value)
         if kind != "plain":
@@ -204,7 +205,10 @@ def combo(items: list[tuple[str, object]], current=None) -> QComboBox:
         i = c.findData(current)
         if i >= 0:
             c.setCurrentIndex(i)
-    c.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    c.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    c.setMaximumWidth(210)
+    c.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+    c.setMinimumContentsLength(12)
     return c
 
 
@@ -514,7 +518,8 @@ def form_grid() -> QGridLayout:
     g = QGridLayout()
     g.setHorizontalSpacing(10)
     g.setVerticalSpacing(6)
-    g.setColumnStretch(1, 1)
+    g.setColumnStretch(1, 0)
+    g.setColumnStretch(4, 1)  # spare space goes to the right, inputs keep their size
     return g
 
 
@@ -775,6 +780,10 @@ QPushButton:disabled { background: #b8c2d0; }
 QPushButton#secondary { background: white; color: #1d4f91; border: 1px solid #2a78d6; }
 QPushButton#secondary:hover { background: #eef4fc; }
 QComboBox, QDoubleSpinBox, QSpinBox { background: white; border: 1px solid #c9d0db; border-radius: 5px; padding: 1px 4px; min-height: 20px; }
+QComboBox QAbstractItemView { background: white; color: #1f1f1d; border: 1px solid #c9d0db;
+    selection-background-color: #2a78d6; selection-color: white; outline: 0; }
+QComboBox QAbstractItemView::item { min-height: 22px; padding: 2px 6px; color: #1f1f1d; }
+QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background: #2a78d6; color: white; }
 QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus { border: 1px solid #2a78d6; }
 QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: #f1f3f6; color: #9aa3af; }
 QHeaderView::section { background: #eef2f7; color: #1d3557; border: none; border-bottom: 1px solid #d9dee7; padding: 5px; font-weight: 700; }

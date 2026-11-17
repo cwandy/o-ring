@@ -74,6 +74,7 @@ class SizePage(Page):
         self.T_min = UnitSpin("temp", 240.0)
         self.T_max = UnitSpin("temp", 300.0)
         self.n_T = QSpinBox()
+        self.n_T.setMaximumWidth(118)
         self.n_T.setRange(2, 15)
         self.n_T.setValue(5)
         self.lag = UnitSpin("dtemp", 0.0, signed=True)

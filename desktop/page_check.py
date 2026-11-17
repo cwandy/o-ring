@@ -112,8 +112,8 @@ class CheckPage(Page):
             box = QWidget()
             grid = QGridLayout(box)
             grid.setContentsMargins(0, 0, 0, 0)
-            grid.setColumnStretch(1, 1)
-            grid.setColumnStretch(2, 2)
+            grid.setColumnStretch(3, 1)
+
             for i, (key, label, mm, feat, _) in enumerate(rows):
                 v = UnitSpin("length", mm * 1e-3)
                 d = DEFAULT_TOL_MM.get(key, 0.025) * 1e-3
@@ -142,8 +142,8 @@ class CheckPage(Page):
             box = QWidget()
             grid = QGridLayout(box)
             grid.setContentsMargins(0, 0, 0, 0)
-            grid.setColumnStretch(1, 1)
-            grid.setColumnStretch(2, 2)
+            grid.setColumnStretch(3, 1)
+
             for i, (lab, v, tol) in enumerate(((t("ui.oring_id"), rid, rid_t), (t("ui.oring_cs"), rcs, rcs_t))):
                 ql = QLabel(lab)
                 ql.setWordWrap(True)
