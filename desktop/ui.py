@@ -857,7 +857,7 @@ QComboBox QAbstractItemView { background: white; color: #1f1f1d; border: 1px sol
 QComboBox QAbstractItemView::item { min-height: 22px; padding: 2px 6px; color: #1f1f1d; }
 QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background: #1d3557; color: white; }
 QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus { border: 1px solid #2a78d6; }
-QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: white; color: #9aa3af; }
+QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: #e9ecf1; color: #8a929e; }
 QHeaderView::section { background: #eef2f7; color: #1d3557; border: none; border-bottom: 1px solid #d9dee7; padding: 5px; font-weight: 700; }
 QTableWidget { background: white; border: 1px solid #d9dee7; border-radius: 6px; gridline-color: #eef0f3; }
 QTableWidget::item:selected { background: #d6e6fa; color: black; }
@@ -866,8 +866,9 @@ QToolBar#topBar QLabel { color: white; }
 QToolBar#topBar QLabel#appTitle { font-size: 16px; font-weight: 700; }
 QToolBar#topBar QComboBox, QToolBar#topBar QDoubleSpinBox { min-width: 70px; }
 QCheckBox, QRadioButton { spacing: 6px; }
-QAbstractSpinBox, QAbstractSpinBox QLineEdit, QComboBox, QComboBox QLineEdit, QLineEdit,
-QAbstractSpinBox:disabled, QComboBox:disabled, QLineEdit:disabled { background: white; background-color: white; }
+QAbstractSpinBox, QAbstractSpinBox QLineEdit, QComboBox, QComboBox QLineEdit, QLineEdit { background: white; }
+QAbstractSpinBox:disabled, QAbstractSpinBox:disabled QLineEdit, QComboBox:disabled, QLineEdit:disabled
+    { background: #e9ecf1; color: #8a929e; }
 """
 
 

@@ -131,8 +131,9 @@ def main() -> int:
     app.setStyle("Fusion")
     from PySide6.QtGui import QColor, QPalette
     pal = app.palette()
-    for group in (QPalette.Active, QPalette.Inactive, QPalette.Disabled):
-        pal.setColor(group, QPalette.Base, QColor("white"))  # input boxes white on every Windows theme
+    for group in (QPalette.Active, QPalette.Inactive):
+        pal.setColor(group, QPalette.Base, QColor("white"))  # active input boxes white on every Windows theme
+    pal.setColor(QPalette.Disabled, QPalette.Base, QColor("#e9ecf1"))  # inactive boxes grey
     app.setPalette(pal)
     f = QFont("Segoe UI", 10) if sys.platform == "win32" else app.font()
     app.setFont(f)
