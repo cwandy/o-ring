@@ -866,6 +866,8 @@ QToolBar#topBar QLabel { color: white; }
 QToolBar#topBar QLabel#appTitle { font-size: 16px; font-weight: 700; }
 QToolBar#topBar QComboBox, QToolBar#topBar QDoubleSpinBox { min-width: 70px; }
 QCheckBox, QRadioButton { spacing: 6px; }
+QAbstractSpinBox, QAbstractSpinBox QLineEdit, QComboBox, QComboBox QLineEdit, QLineEdit,
+QAbstractSpinBox:disabled, QComboBox:disabled, QLineEdit:disabled { background: white; background-color: white; }
 """
 
 

@@ -129,6 +129,11 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("O-Ring")
     app.setStyle("Fusion")
+    from PySide6.QtGui import QColor, QPalette
+    pal = app.palette()
+    for group in (QPalette.Active, QPalette.Inactive, QPalette.Disabled):
+        pal.setColor(group, QPalette.Base, QColor("white"))  # input boxes white on every Windows theme
+    app.setPalette(pal)
     f = QFont("Segoe UI", 10) if sys.platform == "win32" else app.font()
     app.setFont(f)
     sys.excepthook = _excepthook
