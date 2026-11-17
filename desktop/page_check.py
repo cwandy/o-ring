@@ -81,13 +81,11 @@ class CheckPage(Page):
         self._tol_result = None
         self._tol_sig = ""
 
-        g = self.group(t("ui.materials"))
+        g = self.group(t("ui.materials"), 0)
         self.seal = combo([(m.name, k) for k, m in ds.seal_materials.items()], "vmq")
         self.groove = combo([(m.name, k) for k, m in ds.housing_materials.items()], "al6061")
-        self.temper = QComboBox()
         add_row(g, t("ui.seal_material"), self.seal)
         add_row(g, t("ui.groove_material"), self.groove)
-        add_row(g, t("ui.temper"), self.temper)
         self.mating_on = QCheckBox(t("ui.mating_separate"))
         g.addWidget(self.mating_on, g.rowCount(), 0, 1, 2)
         self.mating = combo([(m.name, k) for k, m in ds.housing_materials.items()], "al6061")
@@ -95,10 +93,8 @@ class CheckPage(Page):
         self.mat_rows = [add_row(g, t("ui.mating_material"), self.mating),
                          add_row(g, t("ui.mating_delta"), self.mating_delta)]
         self.mg = g
-        self.groove.currentIndexChanged.connect(self._fill_tempers)
-        self._fill_tempers()
 
-        g = self.group(t("ui.gland"))
+        g = self.group(t("ui.gland"), 1)
         self.kind = radio_row([(k, t(f"ui.{k}")) for k in ("piston", "rod", "face")], "piston")
         add_row(g, t("ui.gland_type"), self.kind)
         self.direction = radio_row([("internal", t("ui.internal")), ("external", t("ui.external"))], "internal")
@@ -109,8 +105,7 @@ class CheckPage(Page):
         self.ecc = UnitSpin("length", 0.0)
         self.ecc_row = add_row(g, t("ui.eccentricity"), self.ecc)
         self.gg = g
-        hint = note(t("desktop.tol_note"))
-        g.addWidget(hint, g.rowCount(), 0, 1, 3)
+        self.groups[t("ui.gland")].setToolTip(t("desktop.tol_note"))
         # one dimension grid per gland type; only the active one is shown
         self.dim_boxes, self.dim_value, self.dim_tol = {}, {}, {}
         for kind, rows in DIMS.items():
@@ -125,6 +120,7 @@ class CheckPage(Page):
                 tol = ToleranceEditor((-d, d), feat)
                 lab = QLabel(t(label))
                 lab.setWordWrap(True)
+                lab.setMaximumWidth(140)
                 grid.addWidget(lab, i, 0)
                 grid.addWidget(v, i, 1)
                 grid.addWidget(tol, i, 2)
@@ -136,7 +132,7 @@ class CheckPage(Page):
             g.addWidget(box, g.rowCount(), 0, 1, 3)
             self.dim_boxes[kind] = box
 
-        g = self.group(t("ui.oring"))
+        g = self.group(t("ui.oring"), 1)
         self.ring = {}
         for kind, (id_mm, cs_mm) in RING_DEFAULT.items():
             self.ring[kind] = (UnitSpin("length", id_mm * 1e-3), ToleranceEditor((-0.30e-3, 0.30e-3), None),
@@ -149,7 +145,10 @@ class CheckPage(Page):
             grid.setColumnStretch(1, 1)
             grid.setColumnStretch(2, 2)
             for i, (lab, v, tol) in enumerate(((t("ui.oring_id"), rid, rid_t), (t("ui.oring_cs"), rcs, rcs_t))):
-                grid.addWidget(QLabel(lab), i, 0)
+                ql = QLabel(lab)
+                ql.setWordWrap(True)
+                ql.setMaximumWidth(140)
+                grid.addWidget(ql, i, 0)
                 grid.addWidget(v, i, 1)
                 grid.addWidget(tol, i, 2)
                 self.watch(v, tol)
@@ -162,7 +161,7 @@ class CheckPage(Page):
         add_row(g, t("ui.swell"), self.swell)
         add_row(g, t("ui.cs_method"), self.cs_method)
 
-        g = self.group(t("ui.operating"))
+        g = self.group(t("ui.operating"), 0)
         self.pressure = UnitSpin("pressure", 50e5)
         self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
         add_row(g, t("ui.pressure"), self.pressure)
@@ -170,7 +169,7 @@ class CheckPage(Page):
         self.T_min = UnitSpin("temp", 200.0)
         self.T_max = UnitSpin("temp", 300.0)
         self.T_step = UnitSpin("dtemp", 5.0)
-        self.mode = radio_row([(k, t(f"ui.mode_{k}")) for k in ("equilibrium", "lag")], "equilibrium")
+        self.mode = radio_row([(k, t(f"ui.mode_{k}")) for k in ("equilibrium", "lag")], "equilibrium", vertical=True)
         self.delta = UnitSpin("dtemp", 10.0, signed=True)
         add_row(g, t("ui.T_min"), self.T_min)
         add_row(g, t("ui.T_max"), self.T_max)
@@ -179,14 +178,15 @@ class CheckPage(Page):
         add_row(g, t("ui.delta_T"), self.delta)
         self.watch(self.T_min, self.T_max, self.T_step, self.mode, self.delta)
 
-        g = self.group(t("ui.tp_limits"))
+        g = self.group(t("ui.tp_limits"), 1)
         self.tp = {}
         for name, label in (("squeeze_max", "ui.out_squeeze_max"), ("fill_max", "ui.fill_max_label"),
                             ("fill_hard_max", "ui.fill_hard_max_label"), ("stretch_max", "ui.out_stretch")):
             self.tp[name] = OptionalValue(UnitSpin("plain", 0.0, plain_range=(0.0, 1.0), decimals=3, step=0.01))
             add_row(g, t(label), self.tp[name])
 
-        self.watch(self.seal, self.groove, self.temper, self.mating_on, self.mating, self.mating_delta, self.kind,
+        self.end_columns()
+        self.watch(self.seal, self.groove, self.mating_on, self.mating, self.mating_delta, self.kind,
                    self.direction, self.full_ecc, self.ecc, self.hardness, self.swell, self.cs_method,
                    self.pressure, self.fluid, *self.tp.values())
 
@@ -301,13 +301,29 @@ class CheckPage(Page):
         lay.addWidget(self.out_msg)
 
     # ---------------------------------------------------------------------- inputs -> design
-    def _fill_tempers(self) -> None:
-        h = dataset().housing_materials[self.groove.currentData()]
-        self.temper.blockSignals(True)
-        self.temper.clear()
-        for x in h.tempers:
-            self.temper.addItem(x.name, x.id)
-        self.temper.blockSignals(False)
+    def _ring_tolerances(self, kind: str) -> None:
+        """Elastomer: AS568 tolerance (read-only). PTFE/PCTFE: editable, default +/-0.1 mm."""
+        from oring_designer.oring_tol import THERMOPLASTIC_DEFAULT_TOL_M, standard_tolerance
+
+        rid, rid_t, rcs, rcs_t = self.ring[kind]
+        el = dataset().seal_materials[self.seal.currentData()].group == "elastomer"
+        for tol in (rid_t, rcs_t):
+            for w in (tol.lo, tol.hi):
+                w.setEnabled(not el)
+        if el:
+            st = standard_tolerance(rid.si(), rcs.si())
+            for tol, v in ((rid_t, st.id_tol_m), (rcs_t, st.cs_tol_m)):
+                tol.lo.set_si(-v)
+                tol.hi.set_si(v)
+                tol.setToolTip(t("desktop.ring_tol_auto", size=st.size))
+            self._ring_was_el = True
+        else:
+            if getattr(self, "_ring_was_el", True):  # switched to a thermoplastic: start from +/-0.1
+                for tol in (rid_t, rcs_t):
+                    tol.lo.set_si(-THERMOPLASTIC_DEFAULT_TOL_M)
+                    tol.hi.set_si(THERMOPLASTIC_DEFAULT_TOL_M)
+                    tol.setToolTip(t("desktop.ring_tol_tp"))
+            self._ring_was_el = False
 
     def _visibility(self, kind: str) -> None:
         for k, box in self.dim_boxes.items():
@@ -371,6 +387,7 @@ class CheckPage(Page):
     def recompute(self) -> None:
         kind = self.kind.key()
         self._visibility(kind)
+        self._ring_tolerances(kind)
         design, kind, tols, mating_delta = self.design()
         U = UNITS
         Ln = U.num_L
@@ -435,7 +452,7 @@ class CheckPage(Page):
         worst = worst_by_family(pts)
         self.sweep_banner.show_text(data_banner_text(any(w.result.data_quality is not None and
                                                          w.result.data_quality.needs_warning for w in worst)
-                                                     or df["no_data"].notna().any(), mats), "warn")
+                                                     or df["no_data"].notna().any(), mats, (T_lo, T_hi + delta)), "warn")
         self.sweep_overall.set_status(summary_status(pts))
         self.sweep_table.set_rows([(w.result.status, render_check(w.result),
                                     f"{U.fmt_T(w.T_housing_K)} / {U.fmt_T(w.T_seal_K)}") for w in worst])

@@ -86,3 +86,13 @@ references:
     url: "https://www.mikipulley.co.jp/en/resources/standards-fitting-tolerances"
     accessed: "2026-11-16"
     notes: "Parsed by tools/derive_iso286.py. Cross-checked against the independent transcription in the PyPI package isofits 1.0 (3-400 mm): 400 values, 5 differences, all typing errors in isofits (the Miki values satisfy upper - lower = IT of the grade). js/JS = +/- IT/2 by definition (ISO 286-1)."
+  - id: trelleborg_variseal_m2_rod
+    citation: "Trelleborg Sealing Solutions, Hydraulic Seals - Rod Seals, Turcon Variseal M2, Tables 39-42 (Edition October 2026), pp. 135-137."
+    url: "https://www.trelleborg.com/seals"
+    accessed: "2026-11-17"
+    notes: "Catalogue pages supplied by the user (PDF)."
+  - id: trelleborg_variseal_m2_piston
+    citation: "Trelleborg Sealing Solutions, Hydraulic Seals - Piston Seals, Turcon Variseal M2, Tables 120-123 (Edition October 2026), pp. 352-354."
+    url: "https://www.trelleborg.com/seals"
+    accessed: "2026-11-17"
+    notes: "Catalogue pages supplied by the user (PDF)."

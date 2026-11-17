@@ -26,13 +26,15 @@ class SizePage(Page):
         ds = dataset()
         self._props, self._ok, self._inp = None, [], None
 
-        g = self.group(t("ui.gland"))
+        g = self.group(t("ui.gland"), 0)
         self.kind = radio_row([(k, t(f"ui.{k}")) for k in ("piston", "rod", "face")], "piston")
         add_row(g, t("ui.gland_type"), self.kind)
         self.direction = radio_row([("internal", t("ui.internal")), ("external", t("ui.external"))], "internal")
         self.dir_row = add_row(g, t("ui.pressure_direction"), self.direction)
         self.D = UnitSpin("length", 50e-3)
-        self.D_row = add_row(g, t("ui.nominal_piston"), self.D)
+        self.tol_nom = UnitSpin("length", 0.025e-3)
+        self.tol_nom.setPrefix("± ")
+        self.D_row = add_row(g, t("ui.nominal_piston"), self.D, self.tol_nom)
         self.cs_min = UnitSpin("length", 1.7e-3)
         self.cs_max = UnitSpin("length", 3.6e-3)
         add_row(g, t("ui.cs_min"), self.cs_min)
@@ -49,7 +51,7 @@ class SizePage(Page):
         add_row(g, t("ui.standards"), std_w)
         self.gg = g
 
-        g = self.group(t("ui.materials"))
+        g = self.group(t("ui.materials"), 1)
         elastomers = [(m.name, k) for k, m in ds.seal_materials.items() if m.group == "elastomer"]
         self.seal = combo(elastomers, "vmq")
         self.groove = combo([(m.name, k) for k, m in ds.housing_materials.items()], "al6061")
@@ -60,7 +62,7 @@ class SizePage(Page):
         self.mat_row = add_row(g, t("ui.mating_material"), self.mating)
         self.mg = g
 
-        g = self.group(t("ui.operating"))
+        g = self.group(t("ui.operating"), 1)
         self.pressure = UnitSpin("pressure", 50e5)
         self.hardness = UnitSpin("plain", 70.0, plain_range=(30.0, 95.0), decimals=0, step=5.0)
         self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
@@ -68,7 +70,7 @@ class SizePage(Page):
         add_row(g, t("ui.hardness"), self.hardness)
         add_row(g, t("ui.fluid"), self.fluid)
 
-        g = self.group(t("ui.sweep"))
+        g = self.group(t("ui.sweep"), 1)
         self.T_min = UnitSpin("temp", 240.0)
         self.T_max = UnitSpin("temp", 300.0)
         self.n_T = QSpinBox()
@@ -80,20 +82,19 @@ class SizePage(Page):
         add_row(g, t("ui.n_temps"), self.n_T)
         add_row(g, t("ui.lag_delta"), self.lag)
 
-        g = self.group(t("ui.tol_inputs"))
-        self.tol_nom = UnitSpin("length", 0.025e-3)
+        g = self.gg  # machined-dimension tolerances belong to the gland
         self.tol_d = UnitSpin("length", 0.025e-3)
         self.tol_w = UnitSpin("length", 0.10e-3)
         self.tol_depth = UnitSpin("length", 0.025e-3)
         self.cl_min = OptionalValue(UnitSpin("length", 0.05e-3))
         self.cl_max = UnitSpin("length", 0.10e-3)
-        add_row(g, t("ui.tol_nominal"), self.tol_nom)
         add_row(g, t("ui.tol_diameter"), self.tol_d)
         add_row(g, t("ui.tol_width"), self.tol_w)
         add_row(g, t("ui.tol_depth"), self.tol_depth)
-        self.cl_rows = [add_row(g, t("ui.clearance_min") + " (" + t("ui.clearance_override") + ")", self.cl_min),
+        self.cl_rows = [add_row(g, t("ui.clearance_min"), self.cl_min),
                         add_row(g, t("ui.clearance_max"), self.cl_max)]
         self.tg = g
+        self.end_columns()
         self.run_btn = QPushButton(t("desktop.run_size"))
         self.run_btn.setStyleSheet("font-weight: 600; padding: 6px 14px;")
         self.run_btn.clicked.connect(self._compute)
@@ -235,13 +236,13 @@ class SizePage(Page):
         rows = []
         for p in self._ok:
             wc = p.wc
-            rows.append([status_text(p.status), p.size, pm(p.ring.id_m, p.ring_tol[0]), pm(p.ring.cs_m, p.ring_tol[1]),
+            rows.append([status_text(p.status), p.size, U.fmt_L(p.ring.id_m), U.fmt_L(p.ring.cs_m),
                          f"{wc.output_min['squeeze_min']:.1%} – {wc.output_max['squeeze_max']:.1%}",
                          f"{wc.output_min['fill']:.1%} – {wc.output_max['fill']:.1%}",
                          f"{wc.output_min['stretch']:.2%} – {wc.output_max['stretch']:.2%}", f"{p.score:.2f}"])
         from ui import STATUS_STYLE
 
-        self.table.fill([t("ui.col_status"), t("ui.col_size"), t("ui.col_id"), t("ui.col_cs"), t("ui.col_squeeze"),
+        self.table.fill([t("ui.col_status"), t("ui.col_size"), t("ui.oring_id"), t("ui.oring_cs"), t("ui.col_squeeze"),
                          t("ui.col_fill"), t("ui.col_stretch"), t("ui.col_score")], rows,
                         [STATUS_STYLE[p.status.value][1] for p in self._ok])
         if self._ok:

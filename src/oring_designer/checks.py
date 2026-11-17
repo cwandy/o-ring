@@ -392,7 +392,8 @@ def run_checks(
     results += check_housing(ds, design, state)
     results += check_fluid(ds, design)
     results += check_data_quality(st)
-    return st, results
+    # undefined rule limits (placeholders) are not reported: no check without a limit (K26)
+    return st, [r for r in results if r.code != "rule_missing"]
 
 
 def overall_status(results: list[CheckResult]) -> Status:

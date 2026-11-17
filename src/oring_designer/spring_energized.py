@@ -55,9 +55,12 @@ class SeGland:
 
 @dataclass(frozen=True)
 class SeSeal:
-    free_height_m: float  # radial (radial glands) or axial (face) free section height
-    width_m: float  # axial (radial glands) or radial (face) seal width
-    static_diameter_m: float  # diameter of the static sealing side (see module doc)
+    """Seal dimensions are optional (catalogues often give only the groove): checks that
+    need a missing dimension are skipped."""
+
+    free_height_m: float | None = None  # radial (radial glands) or axial (face) free section height
+    width_m: float | None = None  # axial (radial glands) or radial (face) seal width
+    static_diameter_m: float | None = None  # diameter of the static sealing side (see module doc)
 
 
 @dataclass(frozen=True)
@@ -69,6 +72,7 @@ class SeLimits:
     extrusion_gap_max_m: float | None = None
     axial_clearance_min_m: float = 0.0
     static_fit_min: float | None = None
+    gap_quality: DataQuality = DataQuality.USER_INPUT  # VENDOR when taken from the catalogue
 
 
 @dataclass(frozen=True)
@@ -102,7 +106,10 @@ def evaluate(d: SeDesign, ds: Dataset, state: ThermalState) -> SeState:
     k_gr, q2 = scale_factor_with_quality(ds.curve(d.groove_material), state.T_housing_K, state.T_ref_K)
     k_mt, q3 = scale_factor_with_quality(ds.curve(mating), state.mating_K, state.T_ref_K)
     qs = [q for q in (q1, q2, q3) if q is not None]
-    h, b, d_static = s.free_height_m * k_seal, s.width_m * k_seal, s.static_diameter_m * k_seal
+    nan = float("nan")
+    h = s.free_height_m * k_seal if s.free_height_m else nan
+    b = s.width_m * k_seal if s.width_m else nan
+    d_static = s.static_diameter_m * k_seal if s.static_diameter_m else nan
     width = g.groove_width_m * k_gr
     groove = g.groove_diameter_m * k_gr
     gap = None
@@ -130,44 +137,58 @@ def evaluate(d: SeDesign, ds: Dataset, state: ThermalState) -> SeState:
                    worst_quality(*qs) if qs else None)
 
 
-def _limit(code: str, value: float, limit: float | None, too_low: bool, params: dict) -> CheckResult:
+def _limit(code: str, value: float, limit: float | None, too_low: bool, params: dict,
+           quality: DataQuality = DataQuality.USER_INPUT) -> CheckResult | None:
     if limit is None:
-        return CheckResult(f"{code}_no_limit", Status.WARN, value, None, params,
-                           DataQuality.PLACEHOLDER)
+        return None
     bad = value < limit if too_low else value > limit
     return CheckResult(f"{code}_{'fail' if bad else 'ok'}", Status.FAIL if bad else Status.PASS,
-                       value, limit, params | {"limit_mm": limit * 1e3}, DataQuality.USER_INPUT)
+                       value, limit, params | {"limit_mm": limit * 1e3}, quality)
 
 
 def check(d: SeDesign, st: SeState) -> list[CheckResult]:
+    """Checks with the entered catalogue limits. Missing limits give one WARN
+    ``se_no_catalog_limits``; missing seal dimensions skip the checks that need them."""
+    import math
+
     lim = d.limits
-    out: list[CheckResult] = []
-    if st.compression_min_m <= 0:
-        out.append(CheckResult("se_no_contact", Status.FAIL, st.compression_min_m, 0.0,
-                               {"value_mm": st.compression_min_m * 1e3}))
-    out.append(_limit("se_compression_min", st.compression_min_m, lim.compression_min_m, True,
-                      {"value_mm": st.compression_min_m * 1e3}))
-    out.append(_limit("se_compression_max", st.compression_max_m, lim.compression_max_m, False,
-                      {"value_mm": st.compression_max_m * 1e3}))
+    out: list[CheckResult | None] = []
+    missing = 0
+    if not math.isnan(st.compression_min_m):
+        if st.compression_min_m <= 0:
+            out.append(CheckResult("se_no_contact", Status.FAIL, st.compression_min_m, 0.0,
+                                   {"value_mm": st.compression_min_m * 1e3}))
+        out.append(_limit("se_compression_min", st.compression_min_m, lim.compression_min_m, True,
+                          {"value_mm": st.compression_min_m * 1e3}))
+        out.append(_limit("se_compression_max", st.compression_max_m, lim.compression_max_m, False,
+                          {"value_mm": st.compression_max_m * 1e3}))
+        missing += (lim.compression_min_m is None) + (lim.compression_max_m is None)
     if st.max_extrusion_gap_m is not None:
         out.append(_limit("se_gap", st.max_extrusion_gap_m, lim.extrusion_gap_max_m, False,
-                          {"value_mm": st.max_extrusion_gap_m * 1e3}))
-    ax_bad = st.axial_clearance_m < lim.axial_clearance_min_m
-    out.append(CheckResult("se_axial_fail" if ax_bad else "se_axial_ok",
-                           Status.FAIL if ax_bad else Status.PASS, st.axial_clearance_m,
-                           lim.axial_clearance_min_m,
-                           {"value_mm": st.axial_clearance_m * 1e3,
-                            "limit_mm": lim.axial_clearance_min_m * 1e3}))
-    p = {"fit": st.static_fit}
-    if lim.static_fit_min is not None:
-        bad = st.static_fit < lim.static_fit_min
-        out.append(CheckResult("se_fit_fail" if bad else "se_fit_ok", Status.FAIL if bad else Status.PASS,
-                               st.static_fit, lim.static_fit_min, p | {"limit": lim.static_fit_min},
-                               DataQuality.USER_INPUT))
-    elif st.static_fit < 0:
-        out.append(CheckResult("se_fit_loose", Status.WARN, st.static_fit, 0.0, p))
-    else:
-        out.append(CheckResult("se_fit_seated", Status.PASS, st.static_fit, 0.0, p))
+                          {"value_mm": st.max_extrusion_gap_m * 1e3}, lim.gap_quality))
+        missing += lim.extrusion_gap_max_m is None
+    if missing:
+        out.append(CheckResult("se_no_catalog_limits", Status.WARN, float(missing), None, {"n": missing},
+                               DataQuality.PLACEHOLDER))
+    if not math.isnan(st.axial_clearance_m):
+        ax_bad = st.axial_clearance_m < lim.axial_clearance_min_m
+        out.append(CheckResult("se_axial_fail" if ax_bad else "se_axial_ok",
+                               Status.FAIL if ax_bad else Status.PASS, st.axial_clearance_m,
+                               lim.axial_clearance_min_m,
+                               {"value_mm": st.axial_clearance_m * 1e3,
+                                "limit_mm": lim.axial_clearance_min_m * 1e3}))
+    if not math.isnan(st.static_fit):
+        p = {"fit": st.static_fit}
+        if lim.static_fit_min is not None:
+            bad = st.static_fit < lim.static_fit_min
+            out.append(CheckResult("se_fit_fail" if bad else "se_fit_ok", Status.FAIL if bad else Status.PASS,
+                                   st.static_fit, lim.static_fit_min, p | {"limit": lim.static_fit_min},
+                                   DataQuality.USER_INPUT))
+        elif st.static_fit < 0:
+            out.append(CheckResult("se_fit_loose", Status.WARN, st.static_fit, 0.0, p))
+        else:
+            out.append(CheckResult("se_fit_seated", Status.PASS, st.static_fit, 0.0, p))
+    out = [r for r in out if r is not None]
     if st.data_quality is not None and st.data_quality.needs_warning:
         out.append(CheckResult("thermal_data_quality", Status.WARN, st.data_quality.value,
                                params={"value": st.data_quality.value}, data_quality=st.data_quality))

@@ -169,8 +169,9 @@ def test_thermoplastic_rule_set_warnings():
     _, res = run_checks(design(seal_material="ptfe"), DS)
     c = codes(res)
     for code in ("tp_split_groove_required", "tp_cold_flow", "tp_spring_energized_recommended",
-                 "extrusion_chart_na", "rule_missing"):
+                 "extrusion_chart_na"):
         assert c[code].status is Status.WARN
+    assert "rule_missing" not in c  # undefined limits are not reported (K26)
 
 
 def test_ph_steel_cryo_toughness_warning():

@@ -220,3 +220,10 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
   - Tolerans analizi Yuva Kontrol sayfasının bir sekmesidir. Her ölçünün toleransı bir ISO 286 sınıfı (H7, f7, …) ya da elle girilen alt/üst sapmadır.
   - ISO 286 sapmaları `data/iso286.yaml` (kaynak `miki_jis_b0401`, JIS B 0401-2 = ISO 286-2, 3–500 mm). js/JS = ±IT/2 (ISO 286-1 tanımı). 3 mm altı ve 500 mm üstü elle girilir.
   - Yuva Kontrol'de köşe radyüsü varsayılanı 0.3 mm'dir. Radyal yuva şemaları dikey eksenle çizilir.
+- **K26 – Sadeleştirme ve katalog (kullanıcı isteği 2026-11-17):**
+  - Isıl işlem durumu seçimi kaldırıldı: termal eğriyi etkilemez (K24). Yuva malzemesi termal ölçekleme için kalır.
+  - Yüzey pürüzlülüğü ve kesit toleransı sonuç kartları kaldırıldı. Tanımsız kural sınırları (`rule_missing`) raporlanmaz: sınırı olmayan kontrol yapılmaz.
+  - O-ring iç çap/kesit toleransı elastomerlerde AS568 tablosundan otomatik (en yakın kesit, sonra en yakın iç çap); PTFE/PCTFE'de elle, varsayılan ±0.1 mm.
+  - Kuvvet: Parker verisi yoksa (termoplastik, grafik dışı) birim uzunluk kuvveti kullanıcıdan alınır; toplam ve sıkma kuvveti onunla hesaplanır.
+  - Yaylı conta: rod/piston yuvası Trelleborg Variseal M2 kataloğundan (`data/variseal_m2.yaml`): seri, yuva çapı, genişlik +0.2, H9/h9, basınca göre S_max (aralık sınırı, vendor), r₁. Conta ölçüleri isteğe bağlıdır; girilmezse sıkışma/eksenel boşluk/oturma kontrolleri yapılmaz. Eksik katalog sınırları tek uyarıdır.
+  - Girdiler tek panelde iki sütun; ayrıntılar "Detaylar" ile açılır.

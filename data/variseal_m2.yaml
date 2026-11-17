@@ -1,0 +1,28 @@
+# Trelleborg Turcon Variseal M2 installation dimensions (metric), from the catalogue pages
+# supplied by the user (Edition October 2026):
+#   rod (RVA):    Table 39 (groove details), Table 41 (installation dimensions), p. 135-136
+#   piston (PVA): Table 120 (groove details), Table 122 (installation dimensions), p. 352-353
+# Diameters in mm. Groove diameter = d (rod) + offset, or D (bore) - offset (piston).
+# Tolerances: rod d h9 / groove D1 H9; bore D H9 / groove d1 h9; groove width L1 +0.2/0.
+# s_max: maximum radial clearance by pressure (MPa upper bounds 2, 10, 20, 40); the catalogue
+# recommends reducing the gap at >= 80 C and a back-up ring above 40 MPa.
+source_rod: trelleborg_variseal_m2_rod
+source_piston: trelleborg_variseal_m2_piston
+data_quality: vendor
+pressure_bounds_MPa: [2, 10, 20, 40]
+r1_max_mm: {0: 0.25, 1: 0.38, 2: 0.38, 3: 0.38, 4: 0.51, 5: 0.51}  # Table 39 / 120, series 000..500
+rod:
+  # series, recommended (standard) range d_min, d_max, extended range, offset, width L1, s_max
+  - {series: RVA0, std: [3.0, 9.9], ext: [3.0, 40.0], offset: 2.9, width: 2.4, s_max: [0.20, 0.10, 0.08, 0.05]}
+  - {series: RVA1, std: [10.0, 19.9], ext: [6.0, 200.0], offset: 4.5, width: 3.6, s_max: [0.25, 0.15, 0.10, 0.07]}
+  - {series: RVA2, std: [20.0, 39.9], ext: [10.0, 400.0], offset: 6.2, width: 4.8, s_max: [0.35, 0.20, 0.15, 0.08]}
+  - {series: RVA3, std: [40.0, 119.9], ext: [20.0, 700.0], offset: 9.4, width: 7.1, s_max: [0.50, 0.25, 0.20, 0.10]}
+  - {series: RVA4, std: [120.0, 999.0], ext: [35.0, 1600.0], offset: 12.2, width: 9.5, s_max: [0.60, 0.30, 0.25, 0.12]}
+  - {series: RVA5, std: [1000.0, 2500.0], ext: [80.0, 2500.0], offset: 19.0, width: 15.0, s_max: [0.90, 0.50, 0.40, 0.20]}
+piston:
+  - {series: PVA0, std: [6.0, 13.9], ext: [6.0, 40.0], offset: 2.9, width: 2.4, s_max: [0.20, 0.10, 0.08, 0.05]}
+  - {series: PVA1, std: [14.0, 24.9], ext: [10.0, 200.0], offset: 4.5, width: 3.6, s_max: [0.25, 0.15, 0.10, 0.07]}
+  - {series: PVA2, std: [25.0, 45.9], ext: [16.0, 400.0], offset: 6.2, width: 4.8, s_max: [0.35, 0.20, 0.15, 0.08]}
+  - {series: PVA3, std: [46.0, 124.9], ext: [28.0, 700.0], offset: 9.4, width: 7.1, s_max: [0.50, 0.25, 0.20, 0.10]}
+  - {series: PVA4, std: [125.0, 999.9], ext: [45.0, 1600.0], offset: 12.2, width: 9.5, s_max: [0.60, 0.30, 0.25, 0.12]}
+  - {series: PVA5, std: [1000.0, 2500.0], ext: [100.0, 2500.0], offset: 19.0, width: 15.0, s_max: [0.90, 0.50, 0.40, 0.20]}

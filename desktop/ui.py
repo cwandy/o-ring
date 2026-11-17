@@ -96,7 +96,7 @@ class UnitSpin(QDoubleSpinBox):
         self._plain = (plain_range, decimals, step)
         self.setKeyboardTracking(False)
         self.setAlignment(Qt.AlignRight)
-        self.setMinimumWidth(110)
+        self.setMinimumWidth(86)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._refresh()
         self.valueChanged.connect(self._on_value)
@@ -228,12 +228,13 @@ class ToleranceEditor(QWidget):
             for c in fits.classes(feature) + fits.classes(other):
                 self.cls.addItem(c, c)
         else:
-            self.cls.setEnabled(False)
-        self.cls.setMaximumWidth(90)
+            self.cls.setVisible(False)
+        self.cls.setMaximumWidth(72)
         self.lo = UnitSpin("length", default_dev_m[0], signed=True)
         self.hi = UnitSpin("length", default_dev_m[1], signed=True)
         for w in (self.lo, self.hi):
-            w.setMinimumWidth(95)
+            w.setMinimumWidth(78)
+            w.setMaximumWidth(96)
         lay.addWidget(self.cls)
         lay.addWidget(self.lo, 1)
         lay.addWidget(self.hi, 1)
@@ -278,6 +279,7 @@ class ToleranceEditor(QWidget):
 # --------------------------------------------------------------------------- outputs
 def heading(text: str, size: int = 15) -> QLabel:
     lab = QLabel(text)
+    lab.setWordWrap(True)
     lab.setStyleSheet(f"font-size: {size}px; font-weight: 600; margin-top: 8px;")
     return lab
 
@@ -404,20 +406,29 @@ def result_rows(results: list[CheckResult]) -> list[tuple[Status, str, None]]:
     return [(r.status, render_check(r), None) for r in sorted(results, key=lambda r: order[r.status])]
 
 
-def data_banner_text(needs: bool, material_ids: tuple[str, ...] = ()) -> str:
+def data_banner_text(needs: bool, material_ids: tuple[str, ...] = (),
+                     T_range: tuple[float, float] | None = None) -> str:
+    """One line: which material is estimated in which temperature range (only ranges that
+    overlap ``T_range`` when given)."""
     if not needs:
         return ""
     ds = dataset()
     mats = {**ds.seal_materials, **ds.housing_materials}
-    lines = []
+    items = []
     for mid in dict.fromkeys(material_ids):
         m = mats.get(mid)
         for seg in (m.thermal_strain.segments if m else []):
             if seg.data_quality.needs_warning:
                 T = [p[0] for p in seg.points] if hasattr(seg, "points") else list(seg.range_K)
-                lines.append(t("ui.data_banner_item", material=m.name, T_lo=min(T), T_hi=max(T),
-                               quality=seg.data_quality.value, source=seg.source))
-    return "⚠ " + t("ui.data_banner") + "".join(f"\n• {x}" for x in lines)
+                lo, hi = min(T), max(T)
+                if T_range is not None and (hi < T_range[0] or lo > T_range[1]):
+                    continue
+                items.append(t("desktop.data_item", material=m.name, T_lo=lo, T_hi=hi))
+    if not items and T_range is not None:  # estimated data used via an adjacent gap: list all
+        return data_banner_text(needs, material_ids, None)
+    if not items:
+        return ""
+    return "⚠ " + t("desktop.data_short", items="; ".join(items))
 
 
 class SvgView(QWidget):
@@ -511,6 +522,7 @@ def add_row(grid: QGridLayout, label: str, *widgets: QWidget) -> int:
     r = grid.rowCount()
     lab = QLabel(label)
     lab.setWordWrap(True)
+    lab.setMaximumWidth(140)
     grid.addWidget(lab, r, 0)
     for j, w in enumerate(widgets):
         grid.addWidget(w, r, 1 + j)
@@ -569,29 +581,37 @@ class Page(QWidget):
         root.addLayout(head)
 
         self.body = QWidget()
-        self.body.setMinimumHeight(560)
+        self.body.setMinimumHeight(520)
         body = QHBoxLayout(self.body)
         body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(12)
-        # inputs: tabs (one per group) + extra area below (buttons)
-        left = QVBoxLayout()
-        left.setSpacing(6)
-        self.input_tabs = QTabWidget()
-        self.input_tabs.setObjectName("inputTabs")
-        left.addWidget(self.input_tabs, 1)
+        body.setSpacing(10)
+        # inputs: one panel, two columns of groups, everything visible without scrolling
+        lw = QFrame()
+        lw.setObjectName("panel")
+        left = QVBoxLayout(lw)
+        left.setContentsMargins(10, 8, 10, 8)
+        left.setSpacing(4)
+        cap = QLabel(t("desktop.inputs"))
+        cap.setObjectName("panelTitle")
+        left.addWidget(cap)
+        cols = QHBoxLayout()
+        cols.setSpacing(10)
+        self._cols = [QVBoxLayout(), QVBoxLayout()]
+        for c in self._cols:
+            c.setSpacing(6)
+            cols.addLayout(c, 1)
+        left.addLayout(cols)
         self.form = QVBoxLayout()
         left.addLayout(self.form)
-        lw = QWidget()
-        lw.setLayout(left)
-        lw.setMinimumWidth(430)
-        lw.setMaximumWidth(600)
-        body.addWidget(lw, 5)
+        left.addStretch(1)
+        body.addWidget(lw, 0)
         self.schematic = SchematicBox()
+        self.schematic.setMinimumWidth(180)
         body.addWidget(self.schematic, 5)
         sw = QFrame()
         sw.setObjectName("panel")
         sl = QVBoxLayout(sw)
-        sl.setContentsMargins(12, 10, 12, 10)
+        sl.setContentsMargins(12, 8, 12, 8)
         cap = QLabel(t("desktop.summary"))
         cap.setObjectName("panelTitle")
         sl.addWidget(cap)
@@ -602,11 +622,13 @@ class Page(QWidget):
         inner.setObjectName("panelInner")
         self.summary = QVBoxLayout(inner)
         self.summary.setContentsMargins(0, 0, 4, 0)
-        self.summary.setSpacing(8)
+        self.summary.setSpacing(6)
         sa.setWidget(inner)
+        sa.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         sl.addWidget(sa, 1)
-        sw.setMinimumWidth(440)
-        body.addWidget(sw, 6)
+        sw.setMinimumWidth(320)
+        sw.setMaximumWidth(560)
+        body.addWidget(sw, 4)
         root.addWidget(self.body, 1)
 
         self.error = Banner()
@@ -618,32 +640,39 @@ class Page(QWidget):
         self.details_widget.hide()
         root.addWidget(self.details_widget)
         self.results_widget = self.details_widget  # compatibility: disabled on error
-        self.groups: dict[str, int] = {}
+        self.groups: dict[str, QGroupBox] = {}
         self._timer = debounce(self, self._run)
 
     def _toggle_details(self, on: bool) -> None:
         self.details_widget.setVisible(on)
         self.details_btn.setText(t("desktop.details_hide" if on else "desktop.details_show"))
 
-    def group(self, title: str) -> QGridLayout:
-        from PySide6.QtWidgets import QScrollArea
-
-        w = QWidget()
-        w.setObjectName("tabPage")
-        outer = QVBoxLayout(w)
-        outer.setContentsMargins(10, 10, 10, 10)
+    def group(self, title: str, col: int = 0, optional: bool = False) -> QGridLayout:
+        """A titled box of inputs in column ``col``. ``optional``: collapsed until ticked."""
+        box = QGroupBox(title)
+        inner = QWidget()
         grid = form_grid()
-        outer.addLayout(grid)
-        outer.addStretch(1)
-        sa = QScrollArea()
-        sa.setWidgetResizable(True)
-        sa.setFrameShape(QFrame.NoFrame)
-        sa.setWidget(w)
-        self.groups[title] = self.input_tabs.addTab(sa, title)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setVerticalSpacing(3)
+        inner.setLayout(grid)
+        lay = QVBoxLayout(box)
+        lay.setContentsMargins(8, 4, 8, 6)
+        lay.addWidget(inner)
+        if optional:
+            box.setCheckable(True)
+            box.setChecked(False)
+            inner.setVisible(False)
+            box.toggled.connect(inner.setVisible)
+        self._cols[col].addWidget(box)
+        self.groups[title] = box
         return grid
 
+    def end_columns(self) -> None:
+        for c in self._cols:
+            c.addStretch(1)
+
     def set_group_visible(self, title: str, on: bool) -> None:
-        self.input_tabs.setTabVisible(self.groups[title], on)
+        self.groups[title].setVisible(on)
 
     def watch(self, *widgets) -> None:
         for w in widgets:
@@ -729,7 +758,8 @@ QLabel#pageTitle { font-size: 22px; font-weight: 700; color: #1d3557; }
 QLabel#pageIntro { color: #5b6270; }
 QLabel#panelTitle { font-size: 14px; font-weight: 700; color: #1d3557; }
 QFrame#panel { background: white; border: 1px solid #d9dee7; border-radius: 10px; }
-QGroupBox { background: white; border: 1px solid #d9dee7; border-radius: 10px; margin-top: 16px; padding: 10px 8px 8px 8px; }
+QGroupBox { background: #fbfcfe; border: 1px solid #e1e6ee; border-radius: 8px; margin-top: 12px; padding: 6px 4px 4px 4px; }
+QGroupBox::indicator { width: 14px; height: 14px; }
 QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 4px; color: #1d3557; font-weight: 700; }
 QTabWidget::pane { border: 1px solid #d9dee7; border-radius: 8px; background: white; top: -1px; }
 QTabBar::tab { background: #e7ebf2; color: #39424e; padding: 7px 14px; margin-right: 2px;
@@ -744,7 +774,7 @@ QPushButton:checked { background: #1d3557; }
 QPushButton:disabled { background: #b8c2d0; }
 QPushButton#secondary { background: white; color: #1d4f91; border: 1px solid #2a78d6; }
 QPushButton#secondary:hover { background: #eef4fc; }
-QComboBox, QDoubleSpinBox, QSpinBox { background: white; border: 1px solid #c9d0db; border-radius: 6px; padding: 3px 6px; min-height: 22px; }
+QComboBox, QDoubleSpinBox, QSpinBox { background: white; border: 1px solid #c9d0db; border-radius: 5px; padding: 1px 4px; min-height: 20px; }
 QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus { border: 1px solid #2a78d6; }
 QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: #f1f3f6; color: #9aa3af; }
 QHeaderView::section { background: #eef2f7; color: #1d3557; border: none; border-bottom: 1px solid #d9dee7; padding: 5px; font-weight: 700; }
@@ -769,13 +799,14 @@ def save_bytes(parent: QWidget, title: str, filename: str, filt: str, data: byte
     return path
 
 
-def radio_row(options: list[tuple[str, str]], current: str):
+def radio_row(options: list[tuple[str, str]], current: str, vertical: bool = False):
     """Horizontal radio buttons; returns (widget, group). ``group.checkedButton().property('key')``."""
     from PySide6.QtWidgets import QButtonGroup, QRadioButton
 
     w = QWidget()
-    lay = QHBoxLayout(w)
+    lay = QVBoxLayout(w) if vertical else QHBoxLayout(w)
     lay.setContentsMargins(0, 0, 0, 0)
+    lay.setSpacing(2 if vertical else 8)
     grp = QButtonGroup(w)
     for i, (key, text) in enumerate(options):
         b = QRadioButton(text)

@@ -123,3 +123,37 @@ def test_formulas_dialog_and_details_toggle(window, monkeypatch):
     page.details_btn.setChecked(True)
     assert not page.details_widget.isHidden()
     page.details_btn.setChecked(False)
+
+
+def test_calc_manual_force_for_ptfe(window):
+    page = window.pages[0]
+    page.seal.setCurrentIndex(page.seal.findData("ptfe"))
+    page.tmin.box.setChecked(True)
+    page.tmax.box.setChecked(True)
+    page.ring_id.box.setChecked(True)
+    page._run()
+    assert page.error.isHidden(), page.error.text()
+    assert not page.cards[8].isVisibleTo(page)  # no Parker data, nothing entered
+    page.q_manual.box.setChecked(True)
+    page._run()
+    assert page.cards[8].isVisibleTo(page) and page.cards[8].value.text().endswith("kN")
+    page.seal.setCurrentIndex(page.seal.findData("vmq"))
+    page._run()
+
+
+def test_check_ring_tolerance_auto_as568(window):
+    page = window.pages[1]
+    page.kind.group.buttons()[0].setChecked(True)
+    page._run()
+    rid_t = page.ring["piston"][1]
+    assert rid_t.deviations()[1] == pytest.approx(0.015 * 0.0254)
+    assert not rid_t.hi.isEnabled()
+
+
+def test_spring_catalogue_mode(window):
+    page = window.pages[3]
+    page.kind.group.buttons()[0].setChecked(True)
+    page._run()
+    assert page.v[("piston", "groove")].si() == pytest.approx(40.6e-3)
+    assert "PVA3" in page.cat_banner.text()
+    assert page.seal_note.text()  # seal dimensions not entered -> note

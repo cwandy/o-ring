@@ -80,8 +80,9 @@ def test_face_static_fit_direction(direction, sign):
 
 def test_missing_catalog_limits_warn():
     res = codes(check(se(), evaluate(se(), DS, ThermalState())))
-    for c in ("se_compression_min_no_limit", "se_compression_max_no_limit", "se_gap_no_limit"):
-        assert res[c].status is Status.WARN and res[c].data_quality is DataQuality.PLACEHOLDER
+    w = res["se_no_catalog_limits"]  # one warning instead of one per check
+    assert w.status is Status.WARN and w.params["n"] == 3 and w.data_quality is DataQuality.PLACEHOLDER
+    assert not any(c.endswith("_no_limit") for c in res)
     assert res["se_axial_ok"].status is Status.PASS
 
 
@@ -123,17 +124,26 @@ def tp_design():
 
 def test_thermoplastic_limits_missing_then_user_input():
     _, res = run_checks(tp_design(), DS)
-    missing = {r.params.get("rule") for r in res if r.code == "rule_missing"}
-    assert {"squeeze_max", "fill_hard_max"} <= missing
+    assert not any(r.code == "rule_missing" for r in res)  # K26
+    assert not any(r.code.startswith("squeeze_over_max") for r in res)
     ds2 = with_rule_overrides(DS, "thermoplastic", "static_radial",
                               {"squeeze_max": 0.15, "fill_max": 0.80, "fill_hard_max": 0.90})
     _, res2 = run_checks(tp_design(), ds2)
     c = codes(res2)
     assert c["squeeze_over_max"].data_quality is DataQuality.USER_INPUT  # 18.9 % > 15 %
-    assert {r.params["rule"] for r in res2 if r.code == "rule_missing"} == {"stretch_max"}
     for code in ("tp_split_groove_required", "tp_cold_flow", "tp_spring_energized_recommended"):
         assert c[code].status is Status.WARN
     assert DS.rule_set("thermoplastic", "static_radial").squeeze_max.value is None  # unchanged
+
+
+def test_optional_seal_dimensions_skip_checks():
+    from dataclasses import replace
+
+    d = replace(se(), seal=SeSeal())
+    res = codes(check(d, evaluate(d, DS, ThermalState())))
+    assert "se_gap_no_limit" not in res and "se_no_contact" not in res
+    assert not any(c.startswith(("se_compression", "se_axial", "se_fit")) for c in res)
+    assert res["se_no_catalog_limits"].params["n"] == 1  # only the gap limit is relevant
 
 
 def test_spring_energized_page_renders():
