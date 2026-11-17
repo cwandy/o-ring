@@ -76,6 +76,9 @@ class MainWindow(QMainWindow):
         self.T_ref = UnitSpin("temp", UNITS.T_ref_K)
         self.T_ref.setMaximumWidth(130)
         bar.addWidget(self.T_ref)
+        from ui import style_popup
+        for c in (self.len_box, self.temp_box, self.p_box):
+            style_popup(c)
         self.len_box.currentTextChanged.connect(lambda v: UNITS.set(L=v))
         self.temp_box.currentIndexChanged.connect(lambda *_: UNITS.set(T=self.temp_box.currentData()))
         self.p_box.currentTextChanged.connect(lambda v: UNITS.set(P=v))

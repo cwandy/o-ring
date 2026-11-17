@@ -120,7 +120,7 @@ class CheckPage(Page):
                 tol = ToleranceEditor((-d, d), feat)
                 lab = QLabel(t(label))
                 lab.setWordWrap(True)
-                lab.setMaximumWidth(140)
+                lab.setMaximumWidth(165)
                 grid.addWidget(lab, i, 0)
                 grid.addWidget(v, i, 1)
                 grid.addWidget(tol, i, 2)
@@ -147,7 +147,7 @@ class CheckPage(Page):
             for i, (lab, v, tol) in enumerate(((t("ui.oring_id"), rid, rid_t), (t("ui.oring_cs"), rcs, rcs_t))):
                 ql = QLabel(lab)
                 ql.setWordWrap(True)
-                ql.setMaximumWidth(140)
+                ql.setMaximumWidth(165)
                 grid.addWidget(ql, i, 0)
                 grid.addWidget(v, i, 1)
                 grid.addWidget(tol, i, 2)
@@ -307,17 +307,14 @@ class CheckPage(Page):
 
         rid, rid_t, rcs, rcs_t = self.ring[kind]
         el = dataset().seal_materials[self.seal.currentData()].group == "elastomer"
-        for tol in (rid_t, rcs_t):
-            for w in (tol.lo, tol.hi):
-                w.setEnabled(not el)
         if el:
             st = standard_tolerance(rid.si(), rcs.si())
             for tol, v in ((rid_t, st.id_tol_m), (rcs_t, st.cs_tol_m)):
-                tol.lo.set_si(-v)
-                tol.hi.set_si(v)
-                tol.setToolTip(t("desktop.ring_tol_auto", size=st.size))
+                tol.set_fixed(-v, v, t("desktop.ring_tol_auto", size=st.size))
             self._ring_was_el = True
         else:
+            for tol in (rid_t, rcs_t):
+                tol.set_editable()
             if getattr(self, "_ring_was_el", True):  # switched to a thermoplastic: start from +/-0.1
                 for tol in (rid_t, rcs_t):
                     tol.lo.set_si(-THERMOPLASTIC_DEFAULT_TOL_M)

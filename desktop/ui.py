@@ -183,7 +183,8 @@ class OptionalValue(QWidget):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self.box)
-        lay.addWidget(spin, 1)
+        lay.addWidget(spin)
+        lay.addStretch(1)
         self.box.setChecked(checked)
         spin.setEnabled(checked)
         self.box.toggled.connect(spin.setEnabled)
@@ -209,7 +210,23 @@ def combo(items: list[tuple[str, object]], current=None) -> QComboBox:
     c.setMaximumWidth(210)
     c.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
     c.setMinimumContentsLength(12)
+    style_popup(c)
     return c
+
+
+def style_popup(c: QComboBox) -> None:
+    """White list, navy highlight under the mouse (independent of the Windows theme)."""
+    from PySide6.QtGui import QPalette
+    from PySide6.QtWidgets import QListView
+
+    view = QListView()
+    c.setView(view)
+    pal = view.palette()
+    pal.setColor(QPalette.Base, QColor("white"))
+    pal.setColor(QPalette.Text, QColor("#1f1f1d"))
+    pal.setColor(QPalette.Highlight, QColor("#1d3557"))
+    pal.setColor(QPalette.HighlightedText, QColor("white"))
+    view.setPalette(pal)
 
 
 class ToleranceEditor(QWidget):
@@ -226,6 +243,7 @@ class ToleranceEditor(QWidget):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         self.cls = QComboBox()
+        style_popup(self.cls)
         self.cls.addItem(t("desktop.tol_custom"), None)
         if feature is not None:
             other = "shaft" if feature == "hole" else "hole"
@@ -234,14 +252,36 @@ class ToleranceEditor(QWidget):
         else:
             self.cls.setVisible(False)
         self.cls.setMaximumWidth(72)
-        self.lo = UnitSpin("length", default_dev_m[0], signed=True)
+        # upper deviation on top, lower below, both in the height of one input row
         self.hi = UnitSpin("length", default_dev_m[1], signed=True)
-        for w in (self.lo, self.hi):
-            w.setMinimumWidth(78)
-            w.setMaximumWidth(96)
+        self.lo = UnitSpin("length", default_dev_m[0], signed=True)
+        stack = QWidget()
+        sv = QVBoxLayout(stack)
+        sv.setContentsMargins(0, 0, 0, 0)
+        sv.setSpacing(0)
+        self.hi_lab, self.lo_lab = QLabel(), QLabel()
+        for w in (self.hi, self.lo):
+            w.setFixedHeight(20)
+            w.setMinimumWidth(72)
+            w.setMaximumWidth(84)
+            f = w.font()
+            f.setPixelSize(11)
+            w.setFont(f)
+            # (NoButtons + style sheet hides the text in Qt; zero-width buttons instead)
+            w.setStyleSheet("QDoubleSpinBox { padding: 0px 2px; min-height: 0px; border: 1px solid #c9d0db;"
+                            " border-radius: 3px; background: white; }"
+                            " QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 0px; border: none; }")
+            w.setPrefix("")
+            sv.addWidget(w)
+        for lab in (self.hi_lab, self.lo_lab):
+            lab.setFixedHeight(20)
+            lab.setStyleSheet("font-size: 11px; color: #39424e;")
+            sv.addWidget(lab)
+            lab.hide()
         lay.addWidget(self.cls)
-        lay.addWidget(self.lo, 1)
-        lay.addWidget(self.hi, 1)
+        lay.addWidget(stack)
+        lay.addStretch(1)
+        self._fixed = False
         self._nominal = None
         self.cls.currentIndexChanged.connect(self._apply)
         self.lo.edited.connect(self.edited.emit)
@@ -271,6 +311,25 @@ class ToleranceEditor(QWidget):
                 self.setToolTip(t("desktop.fit_range"))
         if emit:
             self.edited.emit()
+
+    def set_fixed(self, lo_m: float, hi_m: float, tip: str = "") -> None:
+        """Show fixed (automatic) deviations as text instead of input boxes."""
+        self.lo.set_si(lo_m)
+        self.hi.set_si(hi_m)
+        for w in (self.lo, self.hi):
+            w.hide()
+        self.hi_lab.setText(f"{UNITS.num_L(hi_m):>}" if hi_m < 0 else f"+{UNITS.num_L(hi_m)}")
+        self.lo_lab.setText(f"{UNITS.num_L(lo_m)}" if lo_m < 0 else f"+{UNITS.num_L(lo_m)}")
+        for lab in (self.hi_lab, self.lo_lab):
+            lab.show()
+        self.setToolTip(tip)
+
+    def set_editable(self) -> None:
+        for w in (self.lo, self.hi):
+            w.show()
+            w.setEnabled(True)
+        for lab in (self.hi_lab, self.lo_lab):
+            lab.hide()
 
     def deviations(self) -> tuple[float, float]:
         lo, hi = self.lo.si(), self.hi.si()
@@ -523,11 +582,24 @@ def form_grid() -> QGridLayout:
     return g
 
 
+def inline(*widgets: QWidget) -> QWidget:
+    """Several inputs side by side in one form cell (e.g. value and its tolerance)."""
+    w = QWidget()
+    lay = QHBoxLayout(w)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.setSpacing(4)
+    for x in widgets:
+        lay.addWidget(x)
+    lay.addStretch(1)
+    return w
+
+
 def add_row(grid: QGridLayout, label: str, *widgets: QWidget) -> int:
     r = grid.rowCount()
     lab = QLabel(label)
     lab.setWordWrap(True)
-    lab.setMaximumWidth(140)
+    lab.setMinimumWidth(118)
+    lab.setMaximumWidth(165)
     grid.addWidget(lab, r, 0)
     for j, w in enumerate(widgets):
         grid.addWidget(w, r, 1 + j)
@@ -781,11 +853,11 @@ QPushButton#secondary { background: white; color: #1d4f91; border: 1px solid #2a
 QPushButton#secondary:hover { background: #eef4fc; }
 QComboBox, QDoubleSpinBox, QSpinBox { background: white; border: 1px solid #c9d0db; border-radius: 5px; padding: 1px 4px; min-height: 20px; }
 QComboBox QAbstractItemView { background: white; color: #1f1f1d; border: 1px solid #c9d0db;
-    selection-background-color: #2a78d6; selection-color: white; outline: 0; }
+    selection-background-color: #1d3557; selection-color: white; outline: 0; }
 QComboBox QAbstractItemView::item { min-height: 22px; padding: 2px 6px; color: #1f1f1d; }
-QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background: #2a78d6; color: white; }
+QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background: #1d3557; color: white; }
 QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus { border: 1px solid #2a78d6; }
-QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: #f1f3f6; color: #9aa3af; }
+QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled { background: white; color: #9aa3af; }
 QHeaderView::section { background: #eef2f7; color: #1d3557; border: none; border-bottom: 1px solid #d9dee7; padding: 5px; font-weight: 700; }
 QTableWidget { background: white; border: 1px solid #d9dee7; border-radius: 6px; gridline-color: #eef0f3; }
 QTableWidget::item:selected { background: #d6e6fa; color: black; }

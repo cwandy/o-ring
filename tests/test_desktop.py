@@ -147,7 +147,7 @@ def test_check_ring_tolerance_auto_as568(window):
     page._run()
     rid_t = page.ring["piston"][1]
     assert rid_t.deviations()[1] == pytest.approx(0.015 * 0.0254)
-    assert not rid_t.hi.isEnabled()
+    assert rid_t.hi.isHidden() and not rid_t.hi_lab.isHidden()  # fixed value shown as text
 
 
 def test_spring_catalogue_mode(window):

@@ -14,7 +14,7 @@ from oring_designer.i18n import render_check, t
 from oring_designer.selector import SelectorInput, select
 from oring_designer.sweep import sweep, temperatures, to_frame
 from oring_designer.thermal import ThermalDataError
-from ui import (UNITS, Banner, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row, combo,
+from ui import (UNITS, inline, Banner, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row, combo,
                 data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
 
 STANDARDS = ["AS568", "ISO3601-1 A", "ISO3601-1 G"]
@@ -34,7 +34,7 @@ class SizePage(Page):
         self.D = UnitSpin("length", 50e-3)
         self.tol_nom = UnitSpin("length", 0.025e-3)
         self.tol_nom.setPrefix("± ")
-        self.D_row = add_row(g, t("ui.nominal_piston"), self.D, self.tol_nom)
+        self.D_row = add_row(g, t("ui.nominal_piston"), inline(self.D, self.tol_nom))
         self.cs_min = UnitSpin("length", 1.7e-3)
         self.cs_max = UnitSpin("length", 3.6e-3)
         add_row(g, t("ui.cs_min"), self.cs_min)
