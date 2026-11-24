@@ -1,0 +1,10 @@
+# Lindley, P.B., "Load-compression relationships of rubber units", J. Strain Analysis 1(3)
+# (1966) 190-195, Appendix 1: Young's modulus E and shape-factor constant k of black-filled
+# vulcanizates (B.S. 1154:1952) versus hardness. Pages supplied by the user.
+# Hardness in IRHD; used here for Shore A (IRHD and Shore A are close but not identical
+# scales - listed in DOGRULANMALI). E in kgf/cm^2 as printed (1 kgf/cm^2 = 0.0980665 MPa).
+source: lindley1966
+data_quality: literature
+hardness_IRHD: [35, 45, 55, 65, 75]
+E_kgf_cm2: [11.8, 18.0, 32.5, 58.5, 94.0]
+k: [0.89, 0.80, 0.64, 0.54, 0.52]

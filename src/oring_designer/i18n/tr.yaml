@@ -444,6 +444,7 @@ desktop:
   data_item: "{material} {T_lo:.0f}–{T_hi:.0f} K"
   force_manual: "Birim uzunluk kuvveti, elle [N/mm]"
   force_manual_needed: "Bu conta/koşul için Parker kuvvet verisi yok: kuvvet hesabı için birim uzunluk sıkıştırma kuvvetini 'Kuvvet' kutusuna elle girin."
+  force_lindley: "Parker grafiği bu koşulu kapsamıyor: kuvvet Lindley (1966) toroidal halka formülüyle hesaplandı (E = {E:.1f} MPa, sertlikten). Formül %30 üzeri sıkışmada kuvveti düşük tahmin eder."
   force_manual_used: "Kuvvet, elle girilen {q:.2f} N/mm birim uzunluk kuvvetiyle hesaplandı."
   ring_tol_auto: "AS568'e göre otomatik ({size})"
   ring_tol_tp: "PTFE/PCTFE: elle (varsayılan ±0.1 mm)"
@@ -603,6 +604,10 @@ formulas:
       items:
         - eq: "q = f(W, squeeze, Shore A)  [N/m]"
           note: "Parker Şekil 2-4…2-8 sıkıştırma kuvveti: squeeze'de log-doğrusal, sertlikte doğrusal, kesitte log-log enterpolasyon; aralık dışına çıkılmaz."
+        - eq: "q = W · E · (α_T + k · β_T),   x = W (1 − cos θ),   α_T = 4/3 ln(sec θ + tan θ) − 4/3 sin θ,   β_T = −1/2 ln(sec θ + tan θ) + 1/3 sin θ + 1/6 sec θ tan θ"
+          note: "Parker grafiklerinin kapsamadığı elastomer koşulları: Lindley (1966) toroidal halka formülü, denklem (8). E ve k sertlikten (Lindley Ek 1: 35–75 IRHD; dışında ekstrapolasyon). %30 üzeri sıkışmada kuvveti düşük tahmin eder."
+        - eq: "p_temas = q / (W · sin θ)"
+          note: "Montaj sonrası ortalama temas basıncı (Lindley Şekil 3, yükü taşıyan dikdörtgen genişliği W sin θ)."
         - eq: "F_sıkıştırma = q · π · (ID + W)"
           note: "O-ring çevresi boyunca toplam sıkıştırma kuvveti."
         - eq: "F_basınç = p · π · D² / 4"

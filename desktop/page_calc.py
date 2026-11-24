@@ -286,6 +286,13 @@ class CalcPage(Page):
             q_max = load_per_length(ds, cs_m, sq_hi, hardness, ring_id)
         manual = self.q_manual.si()
         msgs = []
+        if is_el and manual is None and (q_nom is None or q_max is None):
+            # outside the Parker charts: Lindley (1966) toroidal-ring formula from material hardness
+            from oring_designer.seal_mechanics import load_per_length as lindley, modulus
+
+            ql = [lindley(cs_m, s_, self.hardness.si()) for s_ in (sq_nom, sq_hi)]
+            q_nom, q_max = (LoadRange(q, q, q, q) for q in ql)
+            msgs.append(t("desktop.force_lindley", E=modulus(self.hardness.si()).E_Pa / 1e6))
         if manual is not None:
             q = manual * 1000.0  # N/mm -> N/m
             q_nom = q_max = LoadRange(q, q, q, q)
