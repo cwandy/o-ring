@@ -26,8 +26,12 @@ class CalcPage(Page):
         g = self.group(t("ui.materials"), 0)
         self.seal = combo([(m.name, k) for k, m in ds.seal_materials.items()], "vmq")
         self.housing = combo([(m.name, k) for k, m in ds.housing_materials.items()], "ss304")
+        self.compound = QComboBox()
         add_row(g, t("ui.seal_material"), self.seal)
+        add_row(g, t("desktop.compound"), self.compound)
         add_row(g, t("ui.housing_material"), self.housing)
+        self.seal.currentIndexChanged.connect(self._fill_compounds)
+        self.compound.currentIndexChanged.connect(self._apply_compound)
 
         g = self.group(t("ui.gland"), 0)
         self.cs_std = combo([(f"{v:.2f} mm ({std})", (std, v)) for std, v in CS_STD] + [(t("ui.cs_custom"), None)])
@@ -61,6 +65,7 @@ class CalcPage(Page):
         self.hard_row = add_row(g, t("ui.hardness"), self.hardness)
         add_row(g, t("ui.fluid"), self.fluid)
         self.op = g
+        self._fill_compounds()
 
         g = self.group(t("ui.optional_inputs"), 1, optional=True)
         self.tmin = OptionalValue(UnitSpin("plain", 0.15, plain_range=(0.0, 0.9), decimals=3, step=0.01))
@@ -77,7 +82,7 @@ class CalcPage(Page):
         self.optg = g
         self.end_columns()
 
-        self.watch(self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
+        self.watch(self.compound, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
                    self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.q_manual, self.fluid,
                    self.tmin, self.tmax, self.fill_lim, self.depth_tol, self.width_tol, self.stretch)
 
@@ -134,6 +139,30 @@ class CalcPage(Page):
         self._per_T = None
         self.schedule()
 
+    def _fill_compounds(self) -> None:
+        from oring_designer.compounds import for_material
+
+        from ui import style_popup
+        self.compound.blockSignals(True)
+        self.compound.clear()
+        self.compound.addItem(t("desktop.compound_none"), None)
+        for c in for_material(self.seal.currentData()):
+            self.compound.addItem(c.name, c.id)
+        self.compound.setCurrentIndex(1 if self.compound.count() > 1 else 0)
+        self.compound.blockSignals(False)
+        style_popup(self.compound)
+        self._apply_compound()
+
+    def _apply_compound(self) -> None:
+        """A compound fixes the hardness (datasheet / specification grade)."""
+        from oring_designer.compounds import compounds
+
+        cid = self.compound.currentData()
+        c = compounds().get(cid) if cid else None
+        if c is not None and c.hardness_shore_a is not None:
+            self.hardness.set_si(c.hardness_shore_a)
+        self.hardness.setEnabled(c is None or c.hardness_shore_a is None)
+
     def _set_visible(self) -> None:
         face = self.gland.key() == "face"
         for w in (self.direction, self.g.itemAtPosition(self.dir_row, 0).widget()):
@@ -178,6 +207,7 @@ class CalcPage(Page):
             fluid=self.fluid.currentData(), face_direction=direction, cs_tol_m=cs_tol, target_squeeze=target,
             fill_limit=self.fill_lim.si(), depth_tol_m=self.depth_tol.si(), width_tol_m=self.width_tol.si(),
             install_stretch=self.stretch.si() if gland == "radial" else 0.0,
+            compound=self.compound.currentData(),
             round_depth_m=0.0001 * 0.0254 if U.L == "in" else 0.01e-3,
             round_width_m=0.001 * 0.0254 if U.L == "in" else 0.05e-3,
         )
@@ -198,7 +228,19 @@ class CalcPage(Page):
                 notes.append(t("ui.backup_required"))
             elif n == "parker_row_nearest":
                 notes.append(t("ui.parker_nearest"))
-        self.notes.show_text("\n".join(notes), "error" if "backup_ring_required" in res.notes else "info")
+            elif n == "below_tr10":
+                from oring_designer.compounds import compounds
+                c = compounds()[self.compound.currentData()]
+                notes.append(t("desktop.below_tr10", name=c.name, T=U.fmt_T(c.tr10_K)))
+        if res.band_basis == "formula":
+            from oring_designer.compounds import compounds
+            c = compounds()[self.compound.currentData()]
+            pb = res.parker_band
+            notes.append(t("desktop.band_formula", cset=c.compression_set, cond=c.compression_set_conditions,
+                           lo=res.target[0], hi=res.target[1])
+                         + (t("desktop.band_parker_cmp", lo=pb[0], hi=pb[1]) if pb else ""))
+        self.notes.show_text("\n".join(notes), "error" if {"backup_ring_required", "below_tr10"} & set(res.notes)
+                             else "info")
 
         L, Ln = U.fmt_L, U.num_L
         pr = res.parker_ref

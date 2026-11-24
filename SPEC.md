@@ -227,3 +227,7 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
   - Kuvvet: Parker verisi yoksa (termoplastik, grafik dışı) birim uzunluk kuvveti kullanıcıdan alınır; toplam ve sıkma kuvveti onunla hesaplanır.
   - Yaylı conta: rod/piston yuvası Trelleborg Variseal M2 kataloğundan (`data/variseal_m2.yaml`): seri, yuva çapı, genişlik +0.2, H9/h9, basınca göre S_max (aralık sınırı, vendor), r₁. Conta ölçüleri isteğe bağlıdır; girilmezse sıkışma/eksenel boşluk/oturma kontrolleri yapılmaz. Eksik katalog sınırları tek uyarıdır.
   - Girdiler tek panelde iki sütun; ayrıntılar "Detaylar" ile açılır.
+- **K27 – Malzemeye dayalı formülasyon (kullanıcı isteği 2026-11-24):**
+  - Kuvvet: Parker grafikleri dışında elastomerler için Lindley (1966) toroidal halka denklemi (8); E ve k sertlikten (Ek 1).
+  - Hedef squeeze bandı: bileşik (veri sayfası) seçilirse s_min = (x_min/W)/(1−C), s_max = %30 (Parker 3.6); bileşik yoksa Parker bandı. TR10 altı uyarı.
+  - "Montaj temas basıncı > sistem basıncı" ölçütü kullanılmaz: o-ring basınçla kendiliğinden sıkılaşır; bu ölçüt gerçekçi olmayan squeeze verir (70 ShA, 50 bar → %45).

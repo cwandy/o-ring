@@ -72,6 +72,7 @@ class GrooveInput:
     radius_m: float | None = None  # None: Parker chart
     clearance_m: tuple[float, float] | None = None  # radial; None: Parker chart + extrusion limit
     install_stretch: float = 0.0  # radial: I.D. stretch on the groove bottom
+    compound: str | None = None  # seal_compounds.yaml id: formula-based band (compression set)
     swell: float = 0.0
     n_temperatures: int = 9
     cs_method: str = "volume_centroid"
@@ -101,6 +102,8 @@ class GrooveResult:
     status: Status
     parker_ref: dict[str, float] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
+    band_basis: str = "parker"  # "formula" (compound compression set), "parker" or "user"
+    parker_band: tuple[float, float] | None = None
 
     @property
     def squeeze_range(self) -> tuple[float, float]:
@@ -143,17 +146,55 @@ def _cs_tolerance(inp: GrooveInput, ds: Dataset) -> tuple[float, str | None]:
     return float(match.cs_tol_m.max()), None
 
 
-def _band(ds: Dataset, inp: GrooveInput, rules) -> tuple[float, float]:
+def _parker_band(inp: GrooveInput, rules) -> tuple[float, float] | None:
+    rec = rules.recommended_squeeze
+    if rec is None:
+        return None
+    b = min(rec.bands, key=lambda b: abs(b.cs_nominal_in - inp.cs_m / INCH))
+    return b.min, b.max
+
+
+def _with_band(ds: Dataset, group: str, gland_type: str, inp: GrooveInput, band: tuple[float, float],
+               basis: str) -> Dataset:
+    from dataclasses import replace as dc_replace
+
+    from .models import DataQuality, RecommendedSqueeze, SqueezeBand
+
+    if basis == "formula":
+        from .compounds import compounds
+
+        c = compounds()[inp.compound]
+        source, quality = c.source, DataQuality(c.data_quality)
+    else:
+        source, quality = None, DataQuality.USER_INPUT
+    rec = RecommendedSqueeze(bands=[SqueezeBand(cs_nominal_in=inp.cs_m / INCH, min=band[0], max=band[1])],
+                             source=source, data_quality=quality)
+    sets = [rs.model_copy(update={"recommended_squeeze": rec})
+            if rs.material_group == group and rs.gland_type == gland_type else rs for rs in ds.rule_sets]
+    return dc_replace(ds, rule_sets=sets, _curves=ds._curves)
+
+
+def _band(ds: Dataset, inp: GrooveInput, rules) -> tuple[tuple[float, float], str]:
     if inp.target_squeeze is not None:
         lo, hi = inp.target_squeeze
         if not 0 < lo < hi < 1:
             raise ValueError("target squeeze must satisfy 0 < min < max < 1")
-        return lo, hi
-    rec = rules.recommended_squeeze
-    if rec is None:
+        return (lo, hi), "user"
+    parker = _parker_band(inp, rules)
+    if inp.compound is not None:
+        from .compounds import compounds, min_squeeze
+
+        c = compounds()[inp.compound]
+        abs_rule = ds.common_rules.squeeze_min_abs_m
+        if c.compression_set is not None and abs_rule is not None and abs_rule.value:
+            lo = min_squeeze(inp.cs_m, c.compression_set, abs_rule.value)
+            hi_rule = rules.squeeze_max.value if rules.squeeze_max and rules.squeeze_max.value else None
+            hi = hi_rule if hi_rule is not None else (parker[1] if parker else None)
+            if hi is not None and lo < hi:
+                return (lo, hi), "formula"
+    if parker is None:
         raise ValueError("no recommended squeeze band for this material: enter the target squeeze")
-    b = min(rec.bands, key=lambda b: abs(b.cs_nominal_in - inp.cs_m / INCH))
-    return b.min, b.max
+    return parker, "parker"
 
 
 # --------------------------------------------------------------------------- synthetic design
@@ -231,12 +272,22 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         if rng is None or min(temps) < rng[0] - 1e-9 or max(temps) > rng[1] + 1e-9:
             raise TemperatureRangeError(rng, [inp.seal_material, inp.housing_material])
     seal, rules = _rules(ds, inp)
-    target = _band(ds, inp, rules)
+    target, basis = _band(ds, inp, rules)
+    if basis != "parker":  # checks judge the squeeze against the band actually used
+        ds = _with_band(ds, seal.group, "static_face" if inp.gland == "face" else "static_radial",
+                        inp, target, basis)
+        seal, rules = _rules(ds, inp)
     mid = sum(target) / 2
     fill_limit = inp.fill_limit or (rules.fill_max.value if rules.fill_max and rules.fill_max.value
                                     else 0.85)
     row, exact = _parker_row(ds, inp)
     notes: list[str] = []
+    if inp.compound is not None:
+        from .compounds import compounds
+
+        c = compounds()[inp.compound]
+        if c.tr10_K is not None and inp.T_min_K < c.tr10_K:
+            notes.append("below_tr10")
     if not exact:
         notes.append("parker_row_nearest")
     cs_tol, note = _cs_tolerance(inp, ds)
@@ -308,6 +359,7 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         depth_tol_m=depth_tol, machine_depth_m=L - (c_nom / 2 if c_nom else 0.0),
         width_min_m=G_min, width_m=G_rec, width_tol_m=width_tol, radius_m=R, cs_tol_m=cs_tol,
         clearance_m=c, allowed_gap_m=allowed, target=target, fill_limit=fill_limit, wc=wc,
+        band_basis=basis, parker_band=_parker_band(inp, rules),
         per_temperature=per_T, status=status, parker_ref=parker, notes=notes,
     )
 

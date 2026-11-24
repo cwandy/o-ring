@@ -1,0 +1,156 @@
+# Seal compound datasheet values supplied by the user (photos of manufacturer datasheets,
+# 2026-11-24). Used for the formula-based minimum squeeze (compression set / permanent
+# deformation) and the low-temperature check (TR10). Typical values as published; the
+# datasheets state they are not a basis for specification.
+#   compression_set: fraction of the initial deflection not recovered (ISO 815 / ASTM D395);
+#     thermoplastics: ASTM D621 permanent deformation after 24 h under load and 24 h rest
+#     (PTFE) or deformation under load (PCTFE, no permanent value given: conservative).
+compounds:
+  - id: epdm_7ep1197
+    seal_material: epdm
+    name: "EPDM 7EP1197 (Hutchinson)"
+    hardness_shore_a: 70
+    compression_set: {value: 0.12, conditions: "24 h at 150 C, ISO 815-1"}
+    tr10_K: 227.15          # -46 C, ISO 2921
+    brittle_point_K: 218.15 # -55 C, ISO 812
+    source: hutchinson_7ep1197
+    data_quality: vendor
+  - id: ptfe_g400
+    seal_material: ptfe
+    name: "PTFE G400"
+    compression_set: {value: 0.09, conditions: "ASTM D621, 13.7 MPa 24 h + 24 h rest, room temperature (0.19 at 260 C / 41 MPa)"}
+    service_K: [73.15, 533.15]  # -200 / +260 C
+    source: ptfe_g400_tds
+    data_quality: vendor
+  - id: pctfe_c100
+    seal_material: pctfe
+    name: "PCTFE fluteck C100"
+    compression_set: {value: 0.01, conditions: "ASTM D621 deformation under 7 MPa, 24 h at 25 C (2.5 % at 70 C, 12 % at 125 C); permanent value not given"}
+    service_K: [null, 423.15]  # max 150 C in air
+    tensile_modulus_Pa: [1.0e9, 1.6e9]
+    source: fluteck_c100_tds
+    data_quality: vendor
+
+# Company specification ESP-1000-052 (photos supplied by the user): hardness grade, maximum
+# compression set (ASTM D395, air) and the low-temperature requirement (ASTM D2137 brittleness,
+# not a functional sealing limit). Spec maxima are worst-case values for the design.
+  - id: cm04_nbr60
+    seal_material: nbr
+    name: "NBR CM04 60 ShA (ASTM D2000 M4BG 608)"
+    hardness_shore_a: 60
+    compression_set: {value: 0.5, conditions: "ASTM D395, 22 h at 100 C (spec max)"}
+    brittle_point_K: 233.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm04_nbr70
+    seal_material: nbr
+    name: "NBR CM04 70 ShA (ASTM D2000 M4BG 708)"
+    hardness_shore_a: 70
+    compression_set: {value: 0.5, conditions: "ASTM D395, 22 h at 100 C (spec max)"}
+    brittle_point_K: 233.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm04_nbr90
+    seal_material: nbr
+    name: "NBR CM04 90 ShA (ASTM D2000 M4BG 910)"
+    hardness_shore_a: 90
+    compression_set: {value: 0.5, conditions: "ASTM D395, 22 h at 100 C (spec max)"}
+    brittle_point_K: 233.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm03_epdm60
+    seal_material: epdm
+    name: "EPDM CM03 60 ShA (M3CA 607)"
+    hardness_shore_a: 60
+    compression_set: {value: 0.5, conditions: "ASTM D395, 70 h at 100 C (spec max)"}
+    brittle_point_K: 223.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm03_epdm70
+    seal_material: epdm
+    name: "EPDM CM03 70 ShA (M3CA 710)"
+    hardness_shore_a: 70
+    compression_set: {value: 0.7, conditions: "ASTM D395, 22 h at 125 C (spec max)"}
+    brittle_point_K: 223.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm03_epdm80
+    seal_material: epdm
+    name: "EPDM CM03 80 ShA (M3CA 810)"
+    hardness_shore_a: 80
+    compression_set: {value: 0.5, conditions: "ASTM D395, 70 h at 100 C (spec max)"}
+    brittle_point_K: 223.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm03_epdm90
+    seal_material: epdm
+    name: "EPDM CM03 90 ShA (M4AA 907)"
+    hardness_shore_a: 90
+    compression_set: {value: 0.5, conditions: "ASTM D395, 22 h at 70 C (spec max)"}
+    brittle_point_K: 233.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm02_vmq50
+    seal_material: vmq
+    name: "Silikon CM02 50 ShA (A-A-59588 1A/1B)"
+    hardness_shore_a: 50
+    compression_set: {value: 0.35, conditions: "ASTM D395, 22 h at 100 C / 70 h at 150 C (spec max)"}
+    brittle_point_K: 198.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm02_vmq60
+    seal_material: vmq
+    name: "Silikon CM02 60 ShA (A-A-59588 2B)"
+    hardness_shore_a: 60
+    compression_set: {value: 0.25, conditions: "ASTM D395, 70 h at 150 C (spec max)"}
+    brittle_point_K: 210.95
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm02_vmq70_2a
+    seal_material: vmq
+    name: "Silikon CM02 70 ShA sınıf 2A"
+    hardness_shore_a: 70
+    compression_set: {value: 0.4, conditions: "ASTM D395, 70 h at 150 C (spec max)"}
+    brittle_point_K: 210.95
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm02_vmq70_2b
+    seal_material: vmq
+    name: "Silikon CM02 70 ShA sınıf 2B"
+    hardness_shore_a: 70
+    compression_set: {value: 0.25, conditions: "ASTM D395, 70 h at 150 C (spec max)"}
+    brittle_point_K: 210.95
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm02_vmq80_2a
+    seal_material: vmq
+    name: "Silikon CM02 80 ShA sınıf 2A"
+    hardness_shore_a: 80
+    compression_set: {value: 0.45, conditions: "ASTM D395, 70 h at 150 C (spec max)"}
+    brittle_point_K: 210.95
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm02_vmq80_2b
+    seal_material: vmq
+    name: "Silikon CM02 80 ShA sınıf 2B"
+    hardness_shore_a: 80
+    compression_set: {value: 0.3, conditions: "ASTM D395, 70 h at 150 C (spec max)"}
+    brittle_point_K: 210.95
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm01_fkm70
+    seal_material: fkm
+    name: "FKM CM01 70 ShA (M5HK 707)"
+    hardness_shore_a: 70
+    compression_set: {value: 0.2, conditions: "ASTM D395, 22 h at 200 C (spec max)"}
+    brittle_point_K: 248.15
+    source: esp_1000_052
+    data_quality: user_input
+  - id: cm01_fkm90
+    seal_material: fkm
+    name: "FKM CM01 90 ShA (M4BG 910)"
+    hardness_shore_a: 90
+    compression_set: {value: 0.5, conditions: "ASTM D395, 22 h at 200 C (spec max)"}
+    brittle_point_K: 248.15
+    source: esp_1000_052
+    data_quality: user_input

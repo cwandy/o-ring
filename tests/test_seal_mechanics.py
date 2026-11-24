@@ -40,3 +40,18 @@ def test_contact_pressure_definition():
 
 def test_reference_defined():
     assert "lindley1966" in load_dataset().references
+
+
+def test_formula_band_from_compression_set():
+    from oring_designer.groove_calc import GrooveInput, calculate
+
+    ds = load_dataset()
+    inp = dict(seal_material="epdm", cs_m=3.53e-3, gland="face", T_min_K=240, T_max_K=300, pressure_Pa=5e6,
+               hardness_shore_a=70, housing_material="ss304")
+    r = calculate(GrooveInput(**inp, compound="epdm_7ep1197"), ds)
+    assert r.band_basis == "formula"
+    assert r.target[0] == pytest.approx((0.007 * 0.0254 / 3.53e-3) / (1 - 0.12), rel=1e-3)
+    assert r.target[1] == pytest.approx(0.30)
+    assert calculate(GrooveInput(**inp), ds).band_basis == "parker"
+    cold = calculate(GrooveInput(**(inp | {"T_min_K": 220.0}), compound="epdm_7ep1197"), ds)
+    assert "below_tr10" in cold.notes  # TR10 -46 C = 227.15 K
