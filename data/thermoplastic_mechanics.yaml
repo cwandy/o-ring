@@ -1,0 +1,14 @@
+# Mechanical properties of the thermoplastic O-ring materials for the compression load model
+# (src/oring_designer/seal_mechanics.py, thermoplastic_load_per_length), from the datasheets
+# supplied by the user (2026-11-24).
+#  E_Pa: elastic modulus. PTFE G400: compressive strength at 1 % deformation 4-5 N/mm2
+#        (ASTM D695) -> E = 4.5 MPa / 0.01 = 450 MPa (mid value). PCTFE C100: tensile modulus
+#        1-1.6 GPa (ASTM D638), lower value 1.0 GPa.
+#  flow_stress_Pa: contact pressure at which the ring flattens plastically.
+#        PTFE G400: 13.7 N/mm2 gives <= 17 % deformation in 24 h at room temperature
+#        (ASTM D621) -> 13.7 MPa used as the flow stress at the strains of an O-ring squeeze.
+#        PCTFE C100: no compressive yield value given; 7 MPa gives only 1 % (ASTM D621, 25 C):
+#        the lower tensile strength 31 MPa (ASTM D638) is used (estimate, flagged).
+materials:
+  ptfe: {E_Pa: 4.5e+8, flow_stress_Pa: 1.37e+7, source: ptfe_g400_tds, data_quality: vendor}
+  pctfe: {E_Pa: 1.0e+9, flow_stress_Pa: 3.1e+7, source: fluteck_c100_tds, data_quality: extrapolated}

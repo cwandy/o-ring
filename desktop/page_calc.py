@@ -52,10 +52,8 @@ class CalcPage(Page):
         self.g = g
 
         g = self.group(t("ui.force_title").split(" ve ")[0], 0)
-        self.ring_id = OptionalValue(UnitSpin("length", 30e-3))
-        self.q_manual = OptionalValue(UnitSpin("plain", 1.0, plain_range=(0.0, 1000.0), decimals=2, step=0.1))
-        add_row(g, t("ui.ring_id_opt"), self.ring_id)
-        add_row(g, t("desktop.force_manual"), self.q_manual)
+        self.ring_id = UnitSpin("length", 30e-3)  # required: total force and flange clamp load
+        add_row(g, t("ui.oring_id"), self.ring_id)
 
         g = self.group(t("ui.operating"), 1)
         self.pressure = UnitSpin("pressure", 50e5)
@@ -90,7 +88,7 @@ class CalcPage(Page):
         self.end_columns()
 
         self.watch(self.cat_centre, self.duty, self.sil_class, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
-                   self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.q_manual, self.fluid,
+                   self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.fluid,
                    self.tmin, self.tmax, self.fill_lim, self.depth_tol, self.width_tol, self.stretch)
 
         # ------------------------------------------------------------------ results
@@ -351,8 +349,8 @@ class CalcPage(Page):
         self.checks.set_rows([(r.status, render_check(r), None) for r in sorted(worst, key=lambda r: order[r.status])])
 
     def _forces(self, res, cs_m, ring_id, sq_hi, nom_ref, direction, gland, is_el) -> None:
-        """Parker chart load per length (elastomers within the chart ranges) or, where the
-        charts give nothing, the load per length entered by the user."""
+        """Load per length: Parker charts (elastomers in range), Lindley (elastomers outside),
+        datasheet elastic / flow-stress model (PTFE, PCTFE). Totals use the O-ring I.D."""
         from oring_designer.force import LoadRange
 
         U = UNITS
@@ -365,21 +363,23 @@ class CalcPage(Page):
             hardness = self.hardness.si()
             q_nom = load_per_length(ds, cs_m, sq_nom, hardness, ring_id)
             q_max = load_per_length(ds, cs_m, sq_hi, hardness, ring_id)
-        manual = self.q_manual.si()
         msgs = []
-        if is_el and manual is None and (q_nom is None or q_max is None):
+        if is_el and (q_nom is None or q_max is None):
             # outside the Parker charts: Lindley (1966) toroidal-ring formula from material hardness
             from oring_designer.seal_mechanics import load_per_length as lindley, modulus
 
             ql = [lindley(cs_m, s_, self.hardness.si()) for s_ in (sq_nom, sq_hi)]
             q_nom, q_max = (LoadRange(q, q, q, q) for q in ql)
             msgs.append(t("desktop.force_lindley", E=modulus(self.hardness.si()).E_Pa / 1e6))
-        if manual is not None:
-            q = manual * 1000.0  # N/mm -> N/m
-            q_nom = q_max = LoadRange(q, q, q, q)
-            msgs.append(t("desktop.force_manual_used", q=manual))
-        elif q_nom is None or q_max is None:
-            msgs.append(t("desktop.force_manual_needed"))
+        if not is_el:
+            from oring_designer.seal_mechanics import thermoplastic_load_per_length, thermoplastic_props
+
+            seal_id = self.seal.currentData()
+            ql = [thermoplastic_load_per_length(seal_id, cs_m, s_) for s_ in (sq_nom, sq_hi)]
+            if None not in ql:
+                q_nom, q_max = (LoadRange(q, q, q, q) for q in ql)
+                pr = thermoplastic_props(seal_id)
+                msgs.append(t("desktop.force_tp", E=pr["E_Pa"] / 1e6, sf=pr["flow_stress_Pa"] / 1e6))
         to_unit = (lambda q: f"{q / 1000:.2f} N/mm") if U.L == "mm" else (lambda q: f"{q / 175.1268:.1f} lbf/in")
         rows = []
         for label, q in ((t("ui.force_at_nominal", sq=sq_nom, T=U.fmt_T(U.T_ref_K)), q_nom),
@@ -388,9 +388,7 @@ class CalcPage(Page):
                          "–" if q is None else f"{to_unit(q.typical_min_N_per_m)} – {to_unit(q.typical_max_N_per_m)}"])
         self.force_table.fill([t("ui.force_cond"), t("ui.force_range"), t("ui.force_typical")], rows)
         self.clamp_text = None
-        if ring_id is None:
-            msgs.append(t("ui.force_need_id"))
-        elif q_max is not None:
+        if q_max is not None:
             fN = (lambda f: f"{f / 1000:.2f} kN") if U.L == "mm" else (lambda f: f"{f / 4.4482216:.0f} lbf")
             D_seal = ring_id + 2 * cs_m
             clamp = face_clamp_load(q_max, ring_id, cs_m, D_seal, self.pressure.si(), direction)
@@ -401,16 +399,17 @@ class CalcPage(Page):
                 self.force_cards[2].set(t("ui.force_clamp"), fN(clamp.clamp_min_N))
                 self.force_cards[1].show()
                 self.force_cards[2].show()
-                self.clamp_text = (t("ui.force_clamp"), fN(clamp.clamp_min_N))
+                self.clamp_text = (t("ui.force_clamp"), fN(clamp.clamp_min_N),
+                                   t("desktop.clamp_cap", c=fN(clamp.compression_N[1]), p=fN(clamp.pressure_N)))
                 msgs.append(t("ui.force_clamp_note") + ("" if direction == "internal" else " " + t("ui.force_external")))
             else:
-                self.clamp_text = (t("ui.force_total"), fN(clamp.compression_N[1]))
+                self.clamp_text = (t("ui.force_total"), fN(clamp.compression_N[1]), t("ui.force_radial_note"))
                 msgs.append(t("ui.force_radial_note"))
         self.force_note.setText("\n".join(msgs))
         self.cards[8].setVisible(bool(self.clamp_text))
         if self.clamp_text:
             self.cards[8].set(*self.clamp_text)
-        self.force_hint.show_text("" if self.clamp_text else msgs[0] if msgs else "", "info")
+        self.force_hint.show_text(msgs[0] if msgs and (len(msgs) > 1 or not self.clamp_text) else "", "info")
 
     def _save_csv(self) -> None:
         if self._per_T is not None:

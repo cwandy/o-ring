@@ -96,3 +96,33 @@ def required_squeeze(pressure_Pa: float, hardness: float, cs_m: float = 1e-3, ma
         else:
             lo = mid
     return hi
+
+
+# --------------------------------------------------------------------------- thermoplastic rings
+TP_DATA = Path(__file__).resolve().parents[2] / "data" / "thermoplastic_mechanics.yaml"
+
+
+@lru_cache(maxsize=1)
+def _tp() -> dict:
+    return yaml.safe_load(TP_DATA.read_text(encoding="utf-8"))["materials"]
+
+
+def thermoplastic_props(material: str) -> dict | None:
+    return _tp().get(material)
+
+
+def thermoplastic_load_per_length(material: str, cs_m: float, squeeze: float) -> float | None:
+    """Load per unit length (N/m) to flatten a PTFE / PCTFE ring by ``squeeze``.
+
+    Elastic part: Lindley's toroid relation without the rubber shape-factor term (the material
+    is not incompressible rubber): f_el = d E alpha_T. The contact pressure cannot exceed the
+    flow stress of the material: f_pl = sigma_f * b, b = d sin t (Lindley Fig. 3 contact
+    breadth). f = min(f_el, f_pl). Datasheet values in data/thermoplastic_mechanics.yaml.
+    """
+    p = thermoplastic_props(material)
+    if p is None or not 0 < squeeze < 1:
+        return None
+    a, _ = alpha_beta(squeeze)
+    f_el = cs_m * p["E_Pa"] * a
+    f_pl = p["flow_stress_Pa"] * cs_m * math.sin(_theta(squeeze))
+    return min(f_el, f_pl)

@@ -55,3 +55,14 @@ def test_formula_band_from_compression_set():
     assert calculate(GrooveInput(**inp), ds).band_basis == "parker"
     cold = calculate(GrooveInput(**(inp | {"T_min_K": 220.0}), compound="epdm_7ep1197"), ds)
     assert "below_tr10" in cold.notes  # TR10 -46 C = 227.15 K
+
+
+def test_thermoplastic_load_elastic_then_flow_limited():
+    from oring_designer.seal_mechanics import alpha_beta, thermoplastic_load_per_length
+
+    d = 3.53e-3
+    small = thermoplastic_load_per_length("ptfe", d, 0.005)
+    assert small == pytest.approx(d * 4.5e8 * alpha_beta(0.005)[0])  # elastic
+    big = thermoplastic_load_per_length("ptfe", d, 0.10)
+    assert big == pytest.approx(1.37e7 * d * math.sin(math.acos(0.9)))  # flow-stress limited
+    assert thermoplastic_load_per_length("vmq", d, 0.1) is None

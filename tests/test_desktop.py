@@ -125,18 +125,17 @@ def test_formulas_dialog_and_details_toggle(window, monkeypatch):
     page.details_btn.setChecked(False)
 
 
-def test_calc_manual_force_for_ptfe(window):
+def test_calc_force_for_ptfe_and_pressure(window):
     page = window.pages[0]
     page.seal.setCurrentIndex(page.seal.findData("ptfe"))
-    page.tmin.box.setChecked(True)
-    page.tmax.box.setChecked(True)
-    page.ring_id.box.setChecked(True)
     page._run()
     assert page.error.isHidden(), page.error.text()
-    assert not page.cards[8].isVisibleTo(page)  # no Parker data, nothing entered
-    page.q_manual.box.setChecked(True)
-    page._run()
     assert page.cards[8].isVisibleTo(page) and page.cards[8].value.text().endswith("kN")
+    before = page.cards[8].value.text()
+    page.pressure.set_si(100e5)
+    page._run()
+    assert page.cards[8].value.text() != before  # clamp load includes the pressure load
+    page.pressure.set_si(50e5)
     page.seal.setCurrentIndex(page.seal.findData("vmq"))
     page._run()
 
