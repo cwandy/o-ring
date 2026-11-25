@@ -176,6 +176,10 @@ def _with_band(ds: Dataset, group: str, gland_type: str, inp: GrooveInput, band:
         source, quality = c.source, DataQuality(c.data_quality)
     elif basis == "dynamic":
         source, quality = "trelleborg_oring_2024", DataQuality.VENDOR
+    elif basis == "parker":
+        rs = next(r for r in ds.rule_sets if r.material_group == group and r.gland_type == gland_type)
+        source = rs.recommended_squeeze.source if rs.recommended_squeeze else None
+        quality = rs.recommended_squeeze.data_quality if rs.recommended_squeeze else DataQuality.LITERATURE
     else:
         source, quality = None, DataQuality.USER_INPUT
     rec = RecommendedSqueeze(bands=[SqueezeBand(cs_nominal_in=inp.cs_m / INCH, min=band[0], max=band[1])],
@@ -302,7 +306,7 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         outside = min(temps) < rng[0] - 1e-9 or max(temps) > rng[1] + 1e-9
     seal, rules = _rules(ds, inp)
     target, basis = _band(ds, inp, rules)
-    if basis != "parker":  # checks judge the squeeze against the band actually used
+    if True:  # checks judge the squeeze against the band actually used (also non-standard cs)
         ds = _with_band(ds, seal.group, "static_face" if inp.gland == "face" else "static_radial",
                         inp, target, basis)
         seal, rules = _rules(ds, inp)
@@ -390,7 +394,10 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         depth_dev = cat.depth_tol_m if inp.depth_tol_m is None else None
         depth_tol = (cat.depth_tol_m[1] - cat.depth_tol_m[0]) / 2 if inp.depth_tol_m is None else depth_tol
         width_tol = cat.width_tol_m[1] if inp.width_tol_m is None else width_tol
-        notes.append("ptfe_catalog_interpolated" if cat.interpolated else "ptfe_catalog")
+        if "parker_row_nearest" in notes:  # Parker row not used for the catalogue groove
+            notes.remove("parker_row_nearest")
+        notes.append("ptfe_catalog_extrapolated" if cat.extrapolated else
+                     "ptfe_catalog_interpolated" if cat.interpolated else "ptfe_catalog")
         if seal.id == "pctfe":  # no PCTFE table: the PTFE table is used as a proxy (flagged)
             notes.append("pctfe_ptfe_table")
 

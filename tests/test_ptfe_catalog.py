@@ -17,9 +17,13 @@ def test_table_48_rows(cs, h, b, r):
     assert not g.interpolated and g.depth_tol_m == pytest.approx((0, 0.05e-3))
 
 
-def test_interpolation_and_range():
+def test_interpolation_and_ratio_extrapolation():
     assert groove(3.2e-3).interpolated
-    assert groove(9.0e-3) is None
+    small = groove(1.0e-3)  # first row 1.50: h 1.30, b4 1.7, r1 0.2
+    assert small.extrapolated and small.depth_m == pytest.approx(1.30e-3 / 1.5)
+    assert small.width_m == pytest.approx(1.7e-3 / 1.5) and small.radius_m == pytest.approx(0.2e-3 / 1.5)
+    big = groove(9.0e-3)  # last row 8.40: h 7.55, b4 9.2
+    assert big.extrapolated and big.width_m == pytest.approx(9.2e-3 * 9.0 / 8.4)
 
 
 def test_calculator_uses_catalogue_for_ptfe_and_pctfe():

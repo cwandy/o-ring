@@ -51,8 +51,9 @@ class CalcPage(Page):
         self.dir_row = add_row(g, t("ui.pressure_direction"), self.direction)
         self.g = g
 
-        g = self.group(t("ui.force_title").split(" ve ")[0], 0)
-        self.ring_id = UnitSpin("length", 30e-3)  # required: total force and flange clamp load
+        self.force_title = t("desktop.force_group")
+        g = self.group(self.force_title, 0, optional=True)  # ticked: force calculation on
+        self.ring_id = UnitSpin("length", 30e-3)  # total force and flange clamp load
         add_row(g, t("ui.oring_id"), self.ring_id)
 
         g = self.group(t("ui.operating"), 1)
@@ -87,7 +88,7 @@ class CalcPage(Page):
         self.optg = g
         self.end_columns()
 
-        self.watch(self.cat_centre, self.duty, self.sil_class, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
+        self.watch(self.groups[self.force_title], self.cat_centre, self.duty, self.sil_class, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
                    self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.fluid,
                    self.tmin, self.tmax, self.fill_lim, self.depth_tol, self.width_tol, self.stretch)
 
@@ -104,14 +105,14 @@ class CalcPage(Page):
         self.cards = [Card() for _ in range(9)]  # 8: force (total / clamp)
         self.card_grid = grid
         for i, c in enumerate(self.cards):
-            grid.addWidget(c, i // 3, i % 3)
-        self.under.addLayout(grid)
-        self.under.addStretch(1)
+            grid.addWidget(c, i // 2, i % 2)
+        sm.addLayout(grid)  # results on the right
         self.force_hint = Banner()
         sm.addWidget(self.force_hint)
-        sm.addWidget(heading(t("ui.calc_checks"), 13))
+        self.under.addWidget(heading(t("ui.calc_checks"), 13))  # checks under the schematic
         self.checks = StatusTable()
-        sm.addWidget(self.checks)
+        self.under.addWidget(self.checks)
+        self.under.addStretch(1)
         sm.addStretch(1)
 
         r = self.details
@@ -253,7 +254,7 @@ class CalcPage(Page):
                 pass  # shown in the card captions
             elif n == "catalog_width_fill":
                 notes.append(t("desktop.catalog_width_fill"))
-            elif n in ("ptfe_catalog", "ptfe_catalog_interpolated", "pctfe_ptfe_table"):
+            elif n in ("ptfe_catalog", "ptfe_catalog_interpolated", "ptfe_catalog_extrapolated", "pctfe_ptfe_table"):
                 notes.append(t(f"desktop.{n}"))
             elif n == "catalog_thermal_centre":
                 notes.append(t("desktop.cat_centre_note", h=U.fmt_L(res.catalog_depth_m), L=U.fmt_L(res.depth_m),
@@ -359,6 +360,14 @@ class CalcPage(Page):
         ds = dataset()
         for c in self.force_cards:
             c.hide()
+        if not self.groups[self.force_title].isChecked():  # force calculation switched off
+            self.clamp_text = None
+            self.cards[8].hide()
+            self.force_note.setText("")
+            self.force_table.fill([], [])
+            self.force_hint.show_text("")
+            self._layout_cards()
+            return
         sq_nom = (nom_ref.squeeze_min + nom_ref.squeeze_max) / 2
         q_nom = q_max = None
         if is_el:
@@ -421,7 +430,7 @@ class CalcPage(Page):
         order = [8, 0, 1, 2, 3, 4, 5, 6, 7]  # clamp load first
         vis = [self.cards[i] for i in order if not self.cards[i].isHidden()]
         for i, c in enumerate(vis):
-            self.card_grid.addWidget(c, i // 3, i % 3)
+            self.card_grid.addWidget(c, i // 2, i % 2)
 
     def _save_csv(self) -> None:
         if self._per_T is not None:

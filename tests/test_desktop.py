@@ -129,6 +129,9 @@ def test_calc_force_for_ptfe_and_pressure(window):
     page = window.pages[0]
     page.seal.setCurrentIndex(page.seal.findData("ptfe"))
     page._run()
+    assert not page.cards[8].isVisibleTo(page)  # force calculation off by default
+    page.groups[page.force_title].setChecked(True)
+    page._run()
     assert page.error.isHidden(), page.error.text()
     assert page.cards[8].isVisibleTo(page) and page.cards[8].value.text().endswith("kN")
     before = page.cards[8].value.text()
