@@ -22,7 +22,7 @@ def test_interpolation_and_range():
     assert groove(9.0e-3) is None
 
 
-def test_calculator_uses_catalogue_for_ptfe_only():
+def test_calculator_uses_catalogue_for_ptfe_and_pctfe():
     base = dict(cs_m=3.53e-3, gland="face", T_min_K=260, T_max_K=300, pressure_Pa=5e6, housing_material="ss304")
     r = calculate(GrooveInput(seal_material="ptfe", hardness_shore_a=None, catalog_thermal_centre=False, **base), DS)
     assert (r.depth_m, r.width_m, r.radius_m) == pytest.approx((3.15e-3, 3.9e-3, 1.0e-3))
@@ -30,8 +30,9 @@ def test_calculator_uses_catalogue_for_ptfe_only():
     assert r.tolerances["gland.groove_depth_m"].lower_m == 0 and r.tolerances["gland.groove_depth_m"].upper_m == pytest.approx(0.05e-3)
     # no Parker elastomer absolute-minimum rule on PTFE
     assert not any(x.code == "squeeze_min_abs" for x, _ in r.wc.worst_results.values())
-    p = calculate(GrooveInput(seal_material="pctfe", hardness_shore_a=None, **(base | {"T_min_K": 260})), DS)
-    assert p.catalog is None
+    p = calculate(GrooveInput(seal_material="pctfe", hardness_shore_a=None, catalog_thermal_centre=False, **base), DS)
+    assert p.catalog == "trelleborg_ptfe_oring" and "pctfe_ptfe_table" in p.notes  # PTFE table as proxy
+    assert p.width_m == pytest.approx(3.9e-3)
 
 
 def test_thermal_centring_of_catalogue_depth():

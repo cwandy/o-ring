@@ -164,7 +164,7 @@ class ThermalStrainCurve:
     def _dinterp(self):
         return self._interp.derivative()
 
-    def eps(self, T_K, allow_extrapolation: bool = False):
+    def eps(self, T_K, allow_extrapolation: bool = True):
         """eps(T) relative to 293.15 K. Accepts a scalar or an array."""
         self._require_data()
         T = np.asarray(T_K, dtype=float)
@@ -183,7 +183,7 @@ class ThermalStrainCurve:
             result = np.where(T > hi, self.eps_values[-1] + d(hi) * (T - hi), result)
         return float(result) if result.ndim == 0 else result
 
-    def eps_with_quality(self, T_K: float, allow_extrapolation: bool = False):
+    def eps_with_quality(self, T_K: float, allow_extrapolation: bool = True):
         return self.eps(T_K, allow_extrapolation), self.quality_at(T_K)
 
 
@@ -233,7 +233,7 @@ def build_curve(data: ThermalStrainData, name: str = "material") -> ThermalStrai
 # --------------------------------------------------------------------------- public API
 
 
-def eps_th(curve: ThermalStrainCurve, T_K, allow_extrapolation: bool = False):
+def eps_th(curve: ThermalStrainCurve, T_K, allow_extrapolation: bool = True):
     """Thermal strain relative to 293.15 K at ``T_K`` (scalar or array)."""
     return curve.eps(T_K, allow_extrapolation)
 
@@ -242,7 +242,7 @@ def scale_factor_with_quality(
     curve: ThermalStrainCurve,
     T_K: float,
     T_ref_K: float = REFERENCE_T_K,
-    allow_extrapolation: bool = False,
+    allow_extrapolation: bool = True,
 ) -> tuple[float, DataQuality | None]:
     """L(T)/L(T_ref) = (1 + eps(T)) / (1 + eps(T_ref)) and the weakest data quality used.
 
@@ -260,7 +260,7 @@ def scale_factor(
     curve: ThermalStrainCurve,
     T_K: float,
     T_ref_K: float = REFERENCE_T_K,
-    allow_extrapolation: bool = False,
+    allow_extrapolation: bool = True,
 ) -> float:
     return scale_factor_with_quality(curve, T_K, T_ref_K, allow_extrapolation)[0]
 
@@ -270,7 +270,7 @@ def scale_dimension(
     curve: ThermalStrainCurve,
     T_K: float,
     T_ref_K: float = REFERENCE_T_K,
-    allow_extrapolation: bool = False,
+    allow_extrapolation: bool = True,
 ) -> float:
     """Dimension at ``T_K`` of a part whose size is ``L_ref_m`` at ``T_ref_K``.
 

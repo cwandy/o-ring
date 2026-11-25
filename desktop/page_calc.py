@@ -12,7 +12,7 @@ from oring_designer.gland_types import ThermalState
 from oring_designer.groove_calc import GrooveInput, TemperatureRangeError, calculate
 from oring_designer.i18n import render_check, t, t_list
 from oring_designer.thermal import ThermalDataError
-from ui import (UNITS, Banner, Card, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row,
+from ui import (UNITS, ShoreCombo, Banner, Card, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row,
                 combo, data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
 
 CS_STD = [("AS568", v) for v in (1.78, 2.62, 3.53, 5.33, 6.99)] + [("ISO 3601", v) for v in (1.80, 2.65, 3.55, 5.30, 7.00)]
@@ -62,13 +62,13 @@ class CalcPage(Page):
         self.pressure = UnitSpin("pressure", 50e5)
         self.T_lo = UnitSpin("temp", 220.0)
         self.T_hi = UnitSpin("temp", 300.0)
-        self.hardness = UnitSpin("plain", 70.0, plain_range=(50.0, 90.0), decimals=0, step=5.0)
+        self.hardness = ShoreCombo(70.0)
         self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
         add_row(g, t("ui.pressure"), self.pressure)
         add_row(g, t("ui.T_low"), self.T_lo)
         add_row(g, t("ui.T_high"), self.T_hi)
         self.hard_row = add_row(g, t("ui.hardness"), self.hardness)
-        add_row(g, t("ui.fluid"), self.fluid)
+  # fluid: compatibility only -> removed from the inputs (user request 2026-11-25)
         self.op = g
         self._fill_compounds()
 
@@ -177,7 +177,12 @@ class CalcPage(Page):
             w.setVisible(is_el)
         for w in (self.cs_tol, self.g.itemAtPosition(self.cs_tol_row, 0).widget()):
             w.setVisible(not is_el)
-        self.cat_centre.setVisible(self.seal.currentData() == "ptfe")
+        self.cat_centre.setVisible(self.seal.currentData() in ("ptfe", "pctfe"))
+        # PTFE / PCTFE rings: face (axial) glands only
+        radial_btn = self.gland.group.buttons()[1]
+        radial_btn.setEnabled(is_el)
+        if not is_el and radial_btn.isChecked():
+            self.gland.group.buttons()[0].setChecked(True)
         for w in (self.stretch, self.optg.itemAtPosition(self.stretch_row, 0).widget()):
             w.setVisible(not face)
         self.cs_custom.setEnabled(self.cs_std.currentData() is None)
@@ -234,7 +239,9 @@ class CalcPage(Page):
                 notes.append(t("ui.backup_required"))
             elif n == "parker_row_nearest":
                 notes.append(t("ui.parker_nearest"))
-            elif n in ("ptfe_catalog", "ptfe_catalog_interpolated"):
+            elif n == "outside_data_range":
+                pass  # listed in the data banner
+            elif n in ("ptfe_catalog", "ptfe_catalog_interpolated", "pctfe_ptfe_table"):
                 notes.append(t(f"desktop.{n}"))
             elif n == "catalog_thermal_centre":
                 notes.append(t("desktop.cat_centre_note", h=U.fmt_L(res.catalog_depth_m), L=U.fmt_L(res.depth_m),
@@ -243,13 +250,6 @@ class CalcPage(Page):
                 from oring_designer.compounds import compounds
                 c = compounds()[self.compound.currentData()]
                 notes.append(t("desktop.below_tr10", name=c.name, T=U.fmt_T(c.tr10_K)))
-        if res.band_basis == "formula":
-            from oring_designer.compounds import compounds
-            c = compounds()[self.compound.currentData()]
-            pb = res.parker_band
-            notes.append(t("desktop.band_formula", cset=c.compression_set, cond=c.compression_set_conditions,
-                           lo=res.target[0], hi=res.target[1])
-                         + (t("desktop.band_parker_cmp", lo=pb[0], hi=pb[1]) if pb else ""))
         self.notes.show_text("\n".join(notes), "error" if {"backup_ring_required", "below_tr10"} & set(res.notes)
                              else "info")
 

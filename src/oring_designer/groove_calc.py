@@ -277,10 +277,13 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
     if inp.cs_m <= 0:
         raise ValueError("cross-section must be > 0")
     temps = {inp.T_min_K, inp.T_max_K}
+    outside = False
     if temps != {inp.T_ref_K}:
         rng = usable_range(ds, inp.seal_material, inp.housing_material)
-        if rng is None or min(temps) < rng[0] - 1e-9 or max(temps) > rng[1] + 1e-9:
+        if rng is None:  # a material without any thermal data cannot be scaled at all
             raise TemperatureRangeError(rng, [inp.seal_material, inp.housing_material])
+        # outside the data range: computed with the end slope extended (K28), flagged
+        outside = min(temps) < rng[0] - 1e-9 or max(temps) > rng[1] + 1e-9
     seal, rules = _rules(ds, inp)
     target, basis = _band(ds, inp, rules)
     if basis != "parker":  # checks judge the squeeze against the band actually used
@@ -291,7 +294,7 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
     fill_limit = inp.fill_limit or (rules.fill_max.value if rules.fill_max and rules.fill_max.value
                                     else 0.85)
     row, exact = _parker_row(ds, inp)
-    notes: list[str] = []
+    notes: list[str] = ["outside_data_range"] if outside else []
     if inp.compound is not None:
         from .compounds import compounds
 
@@ -334,7 +337,7 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
     c_nom = None if c is None else (c[0] + c[1]) / 2
 
     cat = None
-    if seal.id == "ptfe" and inp.ptfe_catalog and inp.target_squeeze is None:
+    if seal.id in ("ptfe", "pctfe") and inp.ptfe_catalog and inp.target_squeeze is None:
         from .ptfe_catalog import groove as ptfe_groove
 
         cat = ptfe_groove(inp.cs_m)
@@ -345,6 +348,8 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         depth_tol = (cat.depth_tol_m[1] - cat.depth_tol_m[0]) / 2 if inp.depth_tol_m is None else depth_tol
         width_tol = cat.width_tol_m[1] if inp.width_tol_m is None else width_tol
         notes.append("ptfe_catalog_interpolated" if cat.interpolated else "ptfe_catalog")
+        if seal.id == "pctfe":  # no PCTFE table: the PTFE table is used as a proxy (flagged)
+            notes.append("pctfe_ptfe_table")
 
     states = _states(inp)
     W = inp.cs_m

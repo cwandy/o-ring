@@ -71,14 +71,15 @@ def test_no_data_points_are_kept_and_low_temp_still_fails():
     pts = sweep(design(), DS, temperatures(200, 400, 20))
     df = to_frame(pts)
     hot = df.T_housing_K > 373.15
-    assert df.loc[hot, "no_data"].notna().all()
-    assert df.loc[hot, "squeeze_min"].isna().all()
-    assert df.loc[~hot, "no_data"].isna().all()
+    # K28: beyond the data the points are computed with the extended slope and flagged
+    assert df.loc[hot, "squeeze_min"].notna().all()
+    hot_pt = next(p for p in pts if p.T_housing_K > 373.15)
+    assert any(r.code == "thermal_data_quality" for r in hot_pt.results)
     cold = next(p for p in pts if p.T_housing_K == 200)
     assert cold.status is Status.FAIL
 
     inc = sweep(design(groove_material="in718"), DS, [200.0, 320.0])
-    assert inc[1].state is None and inc[1].no_data
+    assert inc[1].state.data_quality.value == "extrapolated"  # IN718 data end at 300 K (K28)
     assert any(r.code == "temp_low_fail" for r in inc[0].results)
 
 
@@ -116,7 +117,6 @@ def test_plots_build():
     names = {tr.name for tr in fig.data}
     assert len(names) == 4
     assert fig.layout.hovermode == "x unified"
-    assert any((s.fillcolor or "").startswith("rgba(82, 81, 78, 0.18") for s in fig.layout.shapes)
     assert len(clearance_figure(df, "K", "in").data) == 3
     curves = {k: build_curve(DS.seal_materials[k].thermal_strain, k) for k in ("ptfe", "nbr")}
     assert len(thermal_strain_figure(curves).data) == 2

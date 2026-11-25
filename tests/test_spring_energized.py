@@ -108,8 +108,8 @@ def test_sweep_cryogenic_range():
 
 
 def test_sweep_no_data_and_extrapolated():
-    pts = se_sweep(se(jacket="pctfe"), DS, [250.0, 350.0])
-    assert pts[1].state is None and pts[1].no_data
+    pts = se_sweep(se(jacket="pctfe"), DS, [250.0, 350.0])  # PCTFE data end at 300 K
+    assert pts[1].state is not None and "thermal_data_quality" in codes(pts[1].results)  # K28
     pts = se_sweep(se(), DS, [40.0])
     assert "thermal_data_quality" in codes(pts[0].results)  # PTFE < 80 K extrapolated by source
 

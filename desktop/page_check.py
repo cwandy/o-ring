@@ -16,7 +16,7 @@ from oring_designer.i18n import family_label, render_check, t
 from oring_designer.sweep import summary_status, sweep, temperatures, to_frame, worst_by_family
 from oring_designer.thermal import ThermalDataError
 from oring_designer.tolerance import DEFAULT_MC_SAMPLES, Tolerance, monte_carlo, rss, worst_case
-from ui import (UNITS, Banner, Card, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, ToleranceEditor,
+from ui import (UNITS, ShoreCombo, Banner, Card, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, ToleranceEditor,
                 UnitSpin, add_row, combo, data_banner_text, dataset, heading, note, radio_row, result_rows,
                 save_bytes, status_text)
 
@@ -154,10 +154,11 @@ class CheckPage(Page):
                 self.watch(v, tol)
             g.addWidget(box, g.rowCount(), 0, 1, 3)
             self.ring_box[kind] = box
-        self.hardness = UnitSpin("plain", 70.0, plain_range=(30.0, 95.0), decimals=0, step=5.0)
+        self.hardness = ShoreCombo(70.0)
         self.swell = UnitSpin("plain", 0.0, plain_range=(-0.2, 0.5), decimals=2, step=0.01)
         self.cs_method = combo([(t(f"ui.cs_{k}"), k) for k in ("volume_centroid", "volume_id", "parker_observed")])
-        add_row(g, t("ui.hardness"), self.hardness)
+        self.hard_row = add_row(g, t("ui.hardness"), self.hardness)
+        self.og = g
         add_row(g, t("ui.swell"), self.swell)
         add_row(g, t("ui.cs_method"), self.cs_method)
 
@@ -165,7 +166,6 @@ class CheckPage(Page):
         self.pressure = UnitSpin("pressure", 50e5)
         self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
         add_row(g, t("ui.pressure"), self.pressure)
-        add_row(g, t("ui.fluid"), self.fluid)
         self.T_min = UnitSpin("temp", 200.0)
         self.T_max = UnitSpin("temp", 300.0)
         self.T_step = UnitSpin("dtemp", 5.0)
@@ -339,6 +339,13 @@ class CheckPage(Page):
             for c in (0, 1):
                 self.mg.itemAtPosition(r, c).widget().setVisible(on)
         tp = dataset().seal_materials[self.seal.currentData()].group == "thermoplastic"
+        for w in (self.hardness, self.og.itemAtPosition(self.hard_row, 0).widget()):
+            w.setVisible(not tp)  # no Shore A for PTFE / PCTFE
+        btns = self.kind.group.buttons()  # PTFE / PCTFE: face glands only
+        for b in btns[:2]:
+            b.setEnabled(not tp)
+        if tp and not btns[2].isChecked():
+            btns[2].setChecked(True)
         self.set_group_visible(t("ui.tp_limits"), tp)
         self.side.setVisible(not face)
         self.clear_plot.setVisible(not face)
@@ -358,7 +365,9 @@ class CheckPage(Page):
         seal = self.seal.currentData()
         design = Design(gland=gland, oring=ORing(rid.si(), rcs.si()), seal_material=seal,
                         groove_material=self.groove.currentData(), mating_material=mating,
-                        pressure_Pa=self.pressure.si(), hardness_shore_a=self.hardness.si(),
+                        pressure_Pa=self.pressure.si(),
+                        hardness_shore_a=None if dataset().seal_materials[seal].group == "thermoplastic"
+                        else self.hardness.si(),
                         fluid=self.fluid.currentData(), cs_method=self.cs_method.currentData(),
                         swell=self.swell.si())
         tols: dict[str, Tolerance] = {}

@@ -147,10 +147,11 @@ def test_proposals_ranked_and_verified():
     assert list(df["size"]) == [p.size for p in props]
 
 
-def test_missing_thermal_data_reported_not_raised():
-    inp = base(groove_material="ph17_4", T_min_K=200, T_max_K=300, cs_min_m=3.5 * MM, cs_max_m=3.6 * MM)
+def test_outside_thermal_data_still_designed():
+    # VMQ / Al 6061 data end at 373.15 K: proposals are still designed (K28), quality flagged
+    inp = base(T_min_K=250, T_max_K=420, cs_min_m=3.5 * MM, cs_max_m=3.6 * MM)
     props = select(inp, DS, SIZES)
-    assert props and all(p.error and p.status is None for p in props)
+    assert props and all(p.error is None for p in props)
 
 
 def test_size_page_renders():

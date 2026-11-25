@@ -69,10 +69,9 @@ def test_thermoplastic_squeeze_band_and_override():
     assert r.per_temperature.volume_change.iloc[0] < -0.02  # PCTFE shrinks ~1 % linear by 93 K
 
 
-def test_temperature_outside_data():
-    with pytest.raises(TemperatureRangeError) as e:
-        calc(T_min_K=220, T_max_K=500)
-    assert e.value.usable == pytest.approx((20.0, 464.15))
+def test_temperature_outside_data_is_computed_and_flagged():
+    r = calc(T_min_K=220, T_max_K=500)  # VMQ data end at 464.15 K (K28: computed, flagged)
+    assert "outside_data_range" in r.notes and r.per_temperature.T_K.max() == pytest.approx(500)
     assert usable_range(DS, "nbr", "ss304") == pytest.approx((219.15, 464.15))
     assert usable_range(DS, "nbr", "in718") == pytest.approx((219.15, 300.0))
     r = calc(seal_material="nbr", T_min_K=240.0, T_max_K=373.15)

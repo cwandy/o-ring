@@ -198,6 +198,32 @@ class OptionalValue(QWidget):
         return self.spin.si() if hasattr(self.spin, "si") else self.spin.currentData()
 
 
+SHORE_A = (50, 60, 70, 75, 80, 90)
+
+
+class ShoreCombo(QComboBox):
+    """Shore A hardness picked from a list (elastomers); same si()/set_si()/edited API as UnitSpin."""
+
+    edited = Signal()
+
+    def __init__(self, value: float = 70.0, parent=None):
+        super().__init__(parent)
+        for h in SHORE_A:
+            self.addItem(f"{h} ShA", float(h))
+        self.set_si(value)
+        self.setMaximumWidth(110)
+        self.currentIndexChanged.connect(lambda *_: self.edited.emit())
+
+    def si(self) -> float:
+        return float(self.currentData())
+
+    def set_si(self, v: float) -> None:
+        i = min(range(self.count()), key=lambda k: abs(self.itemData(k) - v))
+        self.blockSignals(True)
+        self.setCurrentIndex(i)
+        self.blockSignals(False)
+
+
 def combo(items: list[tuple[str, object]], current=None) -> QComboBox:
     c = QComboBox()
     for text, data in items:
@@ -487,6 +513,14 @@ def data_banner_text(needs: bool, material_ids: tuple[str, ...] = (),
                 if T_range is not None and (hi < T_range[0] or lo > T_range[1]):
                     continue
                 items.append(t("desktop.data_item", material=m.name, T_lo=lo, T_hi=hi))
+    if T_range is not None:  # K28: outside the data range the end slope is extended
+        for mid in dict.fromkeys(material_ids):
+            m = mats.get(mid)
+            if m is None:
+                continue
+            cv = ds.curve(mid)
+            if cv.has_data and (T_range[0] < cv.T_min_K - 1e-6 or T_range[1] > cv.T_max_K + 1e-6):
+                items.append(t("desktop.data_outside", material=m.name, T_lo=cv.T_min_K, T_hi=cv.T_max_K))
     if not items and T_range is not None:  # estimated data used via an adjacent gap: list all
         return data_banner_text(needs, material_ids, None)
     if not items:

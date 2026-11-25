@@ -14,7 +14,7 @@ from oring_designer.i18n import render_check, t
 from oring_designer.selector import SelectorInput, select
 from oring_designer.sweep import sweep, temperatures, to_frame
 from oring_designer.thermal import ThermalDataError
-from ui import (UNITS, inline, Banner, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row, combo,
+from ui import (UNITS, ShoreCombo, inline, Banner, StatusPill, OptionalValue, Page, PlotHolder, StatusTable, Table, UnitSpin, add_row, combo,
                 data_banner_text, dataset, heading, note, radio_row, save_bytes, status_text)
 
 STANDARDS = ["AS568", "ISO3601-1 A", "ISO3601-1 G"]
@@ -64,11 +64,10 @@ class SizePage(Page):
 
         g = self.group(t("ui.operating"), 1)
         self.pressure = UnitSpin("pressure", 50e5)
-        self.hardness = UnitSpin("plain", 70.0, plain_range=(30.0, 95.0), decimals=0, step=5.0)
+        self.hardness = ShoreCombo(70.0)
         self.fluid = combo([(t("ui.no_fluid"), None)] + [(f.name, k) for k, f in ds.fluids.items()])
         add_row(g, t("ui.pressure"), self.pressure)
         add_row(g, t("ui.hardness"), self.hardness)
-        add_row(g, t("ui.fluid"), self.fluid)
 
         g = self.group(t("ui.sweep"), 1)
         self.T_min = UnitSpin("temp", 240.0)

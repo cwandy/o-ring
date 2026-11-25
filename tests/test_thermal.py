@@ -186,14 +186,21 @@ def test_ptfe_rereferenced_from_25C():
 @pytest.mark.parametrize("mid, T", [("ss304", 600.0), ("al7075", 10.0), ("in718", 350.0), ("ptfe", 10.0), ("ptfe", 450.0)])
 def test_out_of_range_raises_clear_error(mid, T):
     with pytest.raises(OutOfRangeError) as exc:
-        eps_th(CURVES[mid], T)
+        eps_th(CURVES[mid], T, allow_extrapolation=False)  # strict mode still raises
     msg = str(exc.value)
     assert mid in msg and "veri aralığı dışında" in msg and f"{T:.2f}" in msg
 
 
 def test_out_of_range_in_array_raises():
     with pytest.raises(OutOfRangeError):
-        eps_th(CURVES["ss304"], np.array([100.0, 200.0, 601.0]))
+        eps_th(CURVES["ss304"], np.array([100.0, 200.0, 601.0]), allow_extrapolation=False)
+
+
+def test_default_extends_outside_the_data_and_flags_it():
+    """K28: outside the data range the end slope is extended and the quality is 'extrapolated'."""
+    c = CURVES["ss304"]
+    v, q = scale_factor_with_quality(c, 650.0)
+    assert v > scale_factor_with_quality(c, 589.15)[0] and q.value == "extrapolated"
 
 
 def test_explicit_extrapolation_is_flagged():
