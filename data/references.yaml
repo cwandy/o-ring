@@ -126,3 +126,13 @@ references:
     url: "https://www.trelleborg.com/seals"
     accessed: "2026-11-25"
     notes: "Catalogue page photo supplied by the user."
+  - id: trelleborg_oring_2024
+    citation: "Trelleborg Sealing Solutions, O-Rings, Edition June 2024, B.2 Installation and Design Recommendations: Table 17 (radial clearance S), Table 23 (housing dimensions, metric), B.2.4 initial compression, B.2.5 groove fill."
+    url: "https://www.trelleborg.com/seals"
+    accessed: "2026-11-25"
+    notes: "docs/oring-elastomer.pdf supplied by the user."
+  - id: trelleborg_variseal_hf
+    citation: "Trelleborg Sealing Solutions, Turcon Variseal HF, Edition June 2026: Table 30 (internal face, DVE) and Table 36 (external face, DVL), metric installation dimensions."
+    url: "https://www.trelleborg.com/seals"
+    accessed: "2026-11-25"
+    notes: "docs/varisealhf.pdf supplied by the user."

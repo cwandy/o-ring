@@ -26,3 +26,25 @@ piston:
   - {series: PVA3, std: [46.0, 124.9], ext: [28.0, 700.0], offset: 9.4, width: 7.1, s_max: [0.50, 0.25, 0.20, 0.10]}
   - {series: PVA4, std: [125.0, 999.9], ext: [45.0, 1600.0], offset: 12.2, width: 9.5, s_max: [0.60, 0.30, 0.25, 0.12]}
   - {series: PVA5, std: [1000.0, 2500.0], ext: [100.0, 2500.0], offset: 19.0, width: 15.0, s_max: [0.90, 0.50, 0.40, 0.20]}
+
+# Turcon Variseal HF face seals (docs/varisealhf.pdf, Edition June 2026):
+#   internal pressure DVE: Table 30, series by groove outside diameter d7 (H11)
+#   external pressure DVL: Table 36, series by groove inside diameter d8 (h11)
+#   h groove depth (+tol), b4 groove width (min), r1 max, axial clearance S_max by pressure.
+#   b4 min for diameters > 700 mm (DVE3/DVL3): 8.0, (DVE4/DVL4): 11.0; > 1000 mm (5): 18.0.
+source_face: trelleborg_variseal_hf
+face:
+  internal:
+    - {series: DVE0, std: [10.0, 13.9], ext: [10.0, 40.0], h: 1.45, h_tol: 0.03, b4: 2.40, r1: 0.25, s_max: [0.20, 0.10, 0.08, 0.05]}
+    - {series: DVE1, std: [14.0, 24.9], ext: [13.0, 200.0], h: 2.25, h_tol: 0.05, b4: 3.60, r1: 0.38, s_max: [0.25, 0.15, 0.10, 0.07]}
+    - {series: DVE2, std: [25.0, 45.9], ext: [18.0, 400.0], h: 3.10, h_tol: 0.08, b4: 4.80, r1: 0.38, s_max: [0.35, 0.20, 0.15, 0.08]}
+    - {series: DVE3, std: [46.0, 124.9], ext: [28.0, 700.0], h: 4.70, h_tol: 0.10, b4: 7.10, r1: 0.38, s_max: [0.50, 0.25, 0.20, 0.10]}
+    - {series: DVE4, std: [125.0, 999.9], ext: [45.0, 1000.0], h: 6.10, h_tol: 0.15, b4: 9.50, r1: 0.51, s_max: [0.60, 0.30, 0.25, 0.12]}
+    - {series: DVE5, std: [1000.0, 2500.0], ext: [110.0, 2500.0], h: 9.50, h_tol: 0.20, b4: 15.00, r1: 0.51, s_max: [0.90, 0.50, 0.40, 0.20]}
+  external:
+    - {series: DVL0, std: [6.0, 9.9], ext: [3.0, 40.0], h: 1.45, h_tol: 0.03, b4: 2.40, r1: 0.25, s_max: [0.20, 0.10, 0.08, 0.05]}
+    - {series: DVL1, std: [10.0, 19.9], ext: [8.0, 200.0], h: 2.25, h_tol: 0.05, b4: 3.60, r1: 0.38, s_max: [0.25, 0.15, 0.10, 0.07]}
+    - {series: DVL2, std: [20.0, 39.9], ext: [12.0, 400.0], h: 3.10, h_tol: 0.08, b4: 4.80, r1: 0.38, s_max: [0.35, 0.20, 0.15, 0.08]}
+    - {series: DVL3, std: [40.0, 119.9], ext: [20.0, 700.0], h: 4.70, h_tol: 0.10, b4: 7.10, r1: 0.38, s_max: [0.50, 0.25, 0.20, 0.10]}
+    - {series: DVL4, std: [120.0, 999.9], ext: [35.0, 1600.0], h: 6.10, h_tol: 0.15, b4: 9.50, r1: 0.51, s_max: [0.60, 0.30, 0.25, 0.12]}
+    - {series: DVL5, std: [1000.0, 2500.9], ext: [80.0, 2500.0], h: 9.50, h_tol: 0.20, b4: 15.00, r1: 0.51, s_max: [0.90, 0.50, 0.40, 0.20]}

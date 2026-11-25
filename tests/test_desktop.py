@@ -154,6 +154,11 @@ def test_spring_catalogue_mode(window):
     page = window.pages[3]
     page.kind.group.buttons()[0].setChecked(True)
     page._run()
-    assert page.v[("piston", "groove")].si() == pytest.approx(40.6e-3)
+    assert page.error.isHidden(), page.error.text()
+    assert page.m_groove.si() == pytest.approx(40.6e-3)  # PVA3: 50 - 9.4
     assert "PVA3" in page.cat_banner.text()
     assert page.seal_note.text()  # seal dimensions not entered -> note
+    page.kind.group.buttons()[2].setChecked(True)  # face, internal: Variseal HF DVE2 at 50 mm
+    page._run()
+    assert page.error.isHidden(), page.error.text()
+    assert "DVE3" in page.cat_banner.text() and page.m_depth.si() == pytest.approx(4.7e-3)  # 50 mm: DVE3

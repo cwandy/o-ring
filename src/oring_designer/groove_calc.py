@@ -73,6 +73,7 @@ class GrooveInput:
     clearance_m: tuple[float, float] | None = None  # radial; None: Parker chart + extrusion limit
     install_stretch: float = 0.0  # radial: I.D. stretch on the groove bottom
     compound: str | None = None  # seal_compounds.yaml id: formula-based band (compression set)
+    dynamic: bool = False  # radial dynamic (reciprocating) gland: Trelleborg dynamic depth / band
     ptfe_catalog: bool = True  # PTFE: depth/width/radius from Trelleborg Table 48 when listed
     # catalogue depth corrected so that the mean of the nominal squeeze at T_min and T_max equals
     # the catalogue squeeze at T_ref (catalogue tables are room-temperature designs)
@@ -110,6 +111,7 @@ class GrooveResult:
     catalog: str | None = None  # source id when depth / width come from a catalogue table
     depth_dev_m: tuple[float, float] | None = None  # asymmetric depth deviation (catalogue)
     catalog_depth_m: float | None = None  # catalogue depth before the thermal centring
+    reference_depth_m: float | None = None  # elastomers: Trelleborg Table 23 depth (comparison)
     parker_band: tuple[float, float] | None = None
 
     @property
@@ -172,6 +174,8 @@ def _with_band(ds: Dataset, group: str, gland_type: str, inp: GrooveInput, band:
 
         c = compounds()[inp.compound]
         source, quality = c.source, DataQuality(c.data_quality)
+    elif basis == "dynamic":
+        source, quality = "trelleborg_oring_2024", DataQuality.VENDOR
     else:
         source, quality = None, DataQuality.USER_INPUT
     rec = RecommendedSqueeze(bands=[SqueezeBand(cs_nominal_in=inp.cs_m / INCH, min=band[0], max=band[1])],
@@ -188,6 +192,18 @@ def _band(ds: Dataset, inp: GrooveInput, rules) -> tuple[tuple[float, float], st
             raise ValueError("target squeeze must satisfy 0 < min < max < 1")
         return (lo, hi), "user"
     parker = _parker_band(inp, rules)
+    if inp.dynamic and inp.gland == "radial":
+        from .oring_catalog import initial_compression
+
+        lo, hi = initial_compression("radial_dynamic")  # Trelleborg B.2.4 (approximate)
+        if inp.compound is not None:
+            from .compounds import compounds, min_squeeze
+
+            c = compounds()[inp.compound]
+            abs_rule = ds.common_rules.squeeze_min_abs_m
+            if c.compression_set is not None and abs_rule is not None and abs_rule.value:
+                lo = max(lo, min_squeeze(inp.cs_m, c.compression_set, abs_rule.value))
+        return (lo, hi), "dynamic"
     if inp.compound is not None:
         from .compounds import compounds, min_squeeze
 
@@ -336,6 +352,33 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
                    "clearance_max_m": row.clearance_max_in * INCH}
     c_nom = None if c is None else (c[0] + c[1]) / 2
 
+    ecat = None
+    if seal.group == "elastomer" and seal.id != "ffkm":  # Trelleborg Table 23 (not for FFKM)
+        from .oring_catalog import housing
+
+        ecat = housing(inp.cs_m, inp.gland, inp.dynamic)
+        if ecat is not None:
+            R = ecat.radius_m if inp.radius_m is None else R
+            width_tol = ecat.width_tol_m if inp.width_tol_m is None else width_tol
+            notes.append("trelleborg_housing")
+    if inp.gland == "radial" and seal.group == "elastomer" and inp.clearance_m is None \
+            and inp.hardness_shore_a is not None:
+        from .oring_catalog import radial_clearance
+
+        S = radial_clearance(inp.cs_m, inp.pressure_Pa, inp.hardness_shore_a)
+        allowed = S
+        cmin = c[0]
+        if S is None:
+            if "backup_ring_required" not in notes:
+                notes.append("backup_ring_required")
+            c = (cmin, cmin)
+        else:
+            # full eccentricity: one-sided gap = diametral clearance -> c_max = S (Table 17)
+            c = (min(cmin, S), min(max(c[1], cmin), S))
+            if S < cmin and "backup_ring_required" not in notes:
+                notes.append("backup_ring_required")
+        c_nom = (c[0] + c[1]) / 2
+
     cat = None
     if seal.id in ("ptfe", "pctfe") and inp.ptfe_catalog and inp.target_squeeze is None:
         from .ptfe_catalog import groove as ptfe_groove
@@ -350,6 +393,10 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         notes.append("ptfe_catalog_interpolated" if cat.interpolated else "ptfe_catalog")
         if seal.id == "pctfe":  # no PCTFE table: the PTFE table is used as a proxy (flagged)
             notes.append("pctfe_ptfe_table")
+
+    if ecat is not None and ecat.depth_dev_m is not None and inp.depth_tol_m is None:
+        depth_dev = ecat.depth_dev_m  # axial groove depth h +0.1 / 0 (Trelleborg Table 23)
+        depth_tol = (depth_dev[1] - depth_dev[0]) / 2
 
     states = _states(inp)
     W = inp.cs_m
@@ -394,8 +441,13 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
     wc = evaluate(L, G0)
     G_min = max(G0 * wc.output_max["fill"] / fill_limit, 2 * R + 1e-6)
     G_rec = G_min
+    if ecat is not None:  # catalogue groove width (Trelleborg Table 23); fill is checked
+        G_rec = ecat.width_m
+        if G_min > G_rec + 1e-9:
+            notes.append("catalog_width_fill")
     G_min = math.ceil(G_min / inp.round_width_m - 1e-9) * inp.round_width_m
-    G_rec = math.ceil(G_rec / inp.round_width_m - 1e-9) * inp.round_width_m
+    if ecat is None:
+        G_rec = math.ceil(G_rec / inp.round_width_m - 1e-9) * inp.round_width_m
     wc = evaluate(L, G_rec)
 
     status = max(wc.family_status.values(), key=lambda s: _RANK[s])
@@ -406,6 +458,7 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         width_min_m=G_min, width_m=G_rec, width_tol_m=width_tol, radius_m=R, cs_tol_m=cs_tol,
         clearance_m=c, allowed_gap_m=allowed, target=target, fill_limit=fill_limit, wc=wc,
         band_basis=basis, parker_band=_parker_band(inp, rules),
+        reference_depth_m=None if ecat is None else ecat.depth_m, depth_dev_m=depth_dev,
         per_temperature=per_T, status=status, parker_ref=parker, notes=notes,
     )
 

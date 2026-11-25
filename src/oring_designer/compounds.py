@@ -59,3 +59,18 @@ def min_squeeze(cs_m: float, compression_set: float, min_abs_m: float) -> float:
     if not 0 <= compression_set < 1:
         raise ValueError("compression set must be in [0, 1)")
     return (min_abs_m / cs_m) / (1.0 - compression_set)
+
+
+def spec_grades(seal_material: str) -> list[Compound]:
+    """Company specification grades (ESP-1000-052) of a material, by hardness."""
+    return sorted((c for c in compounds().values()
+                   if c.seal_material == seal_material and c.source == "esp_1000_052"),
+                  key=lambda c: (c.hardness_shore_a or 0, c.id))
+
+
+def spec_compound(seal_material: str, hardness: float, cls: str | None = None) -> Compound | None:
+    """Grade matching the hardness; ``cls`` ("2A" / "2B") picks the silicone class."""
+    cands = [c for c in spec_grades(seal_material) if c.hardness_shore_a == hardness]
+    if cls is not None:
+        cands = [c for c in cands if c.id.endswith(cls.lower())] or cands
+    return cands[0] if cands else None

@@ -42,6 +42,43 @@ def _data() -> dict:
     return yaml.safe_load(DATA.read_text(encoding="utf-8"))
 
 
+@dataclass(frozen=True)
+class VarisealFace:
+    series: str
+    standard_range: bool
+    depth_m: float
+    depth_tol_m: float  # +tol / 0
+    width_min_m: float
+    r1_max_m: float
+    s_max_m: float | None  # axial clearance; None above 40 MPa
+    diameter_class: str  # internal: d7 H11 (groove O.D.), external: d8 h11 (groove I.D.)
+    source: str
+
+
+def face_groove(direction: str, d_m: float, pressure_Pa: float) -> VarisealFace:
+    """Variseal HF: internal pressure -> groove outside diameter d7; external -> inside d8."""
+    data = _data()
+    rows = data["face"][direction]
+    mm = d_m * 1e3
+    row = next((r for r in rows if r["std"][0] <= mm <= r["std"][1]), None)
+    standard = row is not None
+    if row is None:
+        row = next((r for r in rows if r["ext"][0] <= mm <= r["ext"][1]), None)
+    if row is None:
+        raise VarisealRangeError(f"{mm:.2f} mm outside the Variseal HF range")
+    b4 = row["b4"]
+    n = int(row["series"][-1])
+    if mm > 700 and n in (3, 4):
+        b4 = 8.0 if n == 3 else 11.0
+    if mm > 1000 and n == 5:
+        b4 = 18.0
+    p = pressure_Pa / 1e6
+    idx = next((i for i, b in enumerate(data["pressure_bounds_MPa"]) if p < b), None)
+    return VarisealFace(row["series"], standard, row["h"] * 1e-3, row["h_tol"] * 1e-3, b4 * 1e-3,
+                        row["r1"] * 1e-3, None if idx is None else row["s_max"][idx] * 1e-3,
+                        "H11" if direction == "internal" else "h11", data["source_face"])
+
+
 def groove(kind: str, d_m: float, pressure_Pa: float) -> VarisealGroove:
     if kind not in ("rod", "piston"):
         raise VarisealRangeError("Variseal M2 catalogue covers rod and piston glands only")

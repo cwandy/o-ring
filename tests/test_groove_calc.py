@@ -26,8 +26,9 @@ def calc(**kw):
 def test_face_depth_matches_parker_chart_4_3():
     r = calc(gland="face")
     assert 0.101 * IN <= r.depth_m <= 0.107 * IN
-    assert r.depth_tol_m == pytest.approx(0.003 * IN)  # half of .101-.107
-    assert r.width_tol_m == pytest.approx(0.010 * IN)  # .177-.187
+    # Trelleborg Table 23 (K29): axial groove depth +0.1/0, width b4 = 5.00 +0.2/0
+    assert r.depth_dev_m == pytest.approx((0.0, 0.1e-3)) and r.width_tol_m == pytest.approx(0.2e-3)
+    assert r.width_m == pytest.approx(5.00e-3) and r.radius_m == pytest.approx(0.6e-3)
     assert r.cs_tol_m == pytest.approx(0.004 * IN)  # AS568 -2xx
     lo, hi = r.squeeze_range
     assert abs((lo + hi) / 2 - 0.25) < 0.01 and r.target == (0.20, 0.30)
@@ -36,16 +37,17 @@ def test_face_depth_matches_parker_chart_4_3():
 def test_radial_depth_matches_parker_chart_4_2():
     r = calc(gland="radial", seal_material="nbr")
     assert 0.111 * IN <= r.depth_m <= 0.113 * IN
-    assert r.clearance_m == pytest.approx((0.003 * IN, 0.006 * IN))
-    assert r.machine_depth_m == pytest.approx(r.depth_m - 0.0045 * IN / 2)
+    # clearance max = Trelleborg Table 17 S (70 ShA, <= 3.5 MPa, 3-5 mm: 0.10 mm) (K29)
+    assert r.clearance_m == pytest.approx((0.003 * IN, 0.10e-3))
+    c_nom = (0.003 * IN + 0.10e-3) / 2
+    assert r.machine_depth_m == pytest.approx(r.depth_m - c_nom / 2)
 
 
 def test_width_satisfies_fill_limit():
     r = calc(gland="face", T_min_K=220, T_max_K=300, housing_material="al6061")
     assert r.fill_max <= r.fill_limit + 1e-9
     assert r.width_m >= r.width_min_m
-    # narrowest width: one rounding step (0.05 mm) narrower would exceed the fill limit
-    assert r.fill_max * r.width_m / (r.width_m - 0.05e-3) > r.fill_limit
+    assert r.width_m == pytest.approx(5.00e-3)  # Trelleborg Table 23 b4 (K29)
 
 
 def test_per_temperature_table():

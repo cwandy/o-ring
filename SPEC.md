@@ -231,3 +231,6 @@ Bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
   - Kuvvet: Parker grafikleri dışında elastomerler için Lindley (1966) toroidal halka denklemi (8); E ve k sertlikten (Ek 1).
   - Hedef squeeze bandı: bileşik (veri sayfası) seçilirse s_min = (x_min/W)/(1−C), s_max = %30 (Parker 3.6); bileşik yoksa Parker bandı. TR10 altı uyarı.
   - "Montaj temas basıncı > sistem basıncı" ölçütü kullanılmaz: o-ring basınçla kendiliğinden sıkılaşır; bu ölçüt gerçekçi olmayan squeeze verir (70 ShA, 50 bar → %45).
+
+- **K28 – Veri aralığı dışı (2026-11-25):** Termal veri dışında hesap reddedilmez; eğri uç eğimiyle uzatılır, sonuç "extrapolated" işaretlenir ve uyarılır.
+- **K29 – Trelleborg katalogları (2026-11-25):** Elastomer yuva genişliği ve radyüsü Trelleborg O-Ring Tablo 23'ten (FFKM hariç); derinlik şartname kalıcı deformasyonundan (FFKM/PVMQ: Parker bandı). Radyal statik / dinamik seçimi (dinamik: Tablo 23 dinamik derinlik referansı, B.2.4 %6–27 bandı). Radyal boşluk üst sınırı Tablo 17 S (basınç ve sertlik). PTFE yuvası Trelleborg PTFE Tablo 48, PCTFE için vekil. Yaylı conta: Variseal M2 (rod/piston) ve HF (face) kataloğundan; radyal boşluk = S_max. Akışkan girişi kaldırıldı.

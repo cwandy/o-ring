@@ -26,12 +26,9 @@ class CalcPage(Page):
         g = self.group(t("ui.materials"), 0)
         self.seal = combo([(m.name, k) for k, m in ds.seal_materials.items()], "vmq")
         self.housing = combo([(m.name, k) for k, m in ds.housing_materials.items()], "ss304")
-        self.compound = QComboBox()
         add_row(g, t("ui.seal_material"), self.seal)
-        add_row(g, t("desktop.compound"), self.compound)
         add_row(g, t("ui.housing_material"), self.housing)
-        self.seal.currentIndexChanged.connect(self._fill_compounds)
-        self.compound.currentIndexChanged.connect(self._apply_compound)
+        self.seal.currentIndexChanged.connect(self._fill_shore)
 
         g = self.group(t("ui.gland"), 0)
         self.cs_std = combo([(f"{v:.2f} mm ({std})", (std, v)) for std, v in CS_STD] + [(t("ui.cs_custom"), None)])
@@ -43,6 +40,8 @@ class CalcPage(Page):
         self.cs_tol_row = add_row(g, t("ui.cs_tol_opt").split(",")[0], self.cs_tol)
         self.gland = radio_row([("face", t("ui.gland_face")), ("radial", t("ui.gland_radial"))], "face")
         add_row(g, t("ui.gland_type"), self.gland)
+        self.duty = radio_row([("static", t("desktop.static")), ("dynamic", t("desktop.dynamic"))], "static")
+        self.duty_row = add_row(g, t("desktop.duty"), self.duty)
         from PySide6.QtWidgets import QCheckBox
         self.cat_centre = QCheckBox(t("desktop.cat_centre"))
         self.cat_centre.setChecked(True)
@@ -70,7 +69,10 @@ class CalcPage(Page):
         self.hard_row = add_row(g, t("ui.hardness"), self.hardness)
   # fluid: compatibility only -> removed from the inputs (user request 2026-11-25)
         self.op = g
-        self._fill_compounds()
+        self.sil_class = radio_row([("2A", t("desktop.class_2a")), ("2B", t("desktop.class_2b"))], "2B")
+        self.cls_row = add_row(g, t("desktop.spec_class"), self.sil_class)
+        self.cls_grid = g
+        self._fill_shore()
 
         g = self.group(t("ui.optional_inputs"), 1, optional=True)
         self.tmin = OptionalValue(UnitSpin("plain", 0.15, plain_range=(0.0, 0.9), decimals=3, step=0.01))
@@ -87,7 +89,7 @@ class CalcPage(Page):
         self.optg = g
         self.end_columns()
 
-        self.watch(self.cat_centre, self.compound, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
+        self.watch(self.cat_centre, self.duty, self.sil_class, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
                    self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.q_manual, self.fluid,
                    self.tmin, self.tmax, self.fill_lim, self.depth_tol, self.width_tol, self.stretch)
 
@@ -144,29 +146,29 @@ class CalcPage(Page):
         self._per_T = None
         self.schedule()
 
-    def _fill_compounds(self) -> None:
-        from oring_designer.compounds import for_material
+    def _fill_shore(self) -> None:
+        """Elastomers: Shore A from the specification grades of the material (FFKM / PVMQ:
+        generic list, Parker band)."""
+        from oring_designer.compounds import spec_grades
 
-        from ui import style_popup
-        self.compound.blockSignals(True)
-        self.compound.clear()
-        self.compound.addItem(t("desktop.compound_none"), None)
-        for c in for_material(self.seal.currentData()):
-            self.compound.addItem(c.name, c.id)
-        self.compound.setCurrentIndex(1 if self.compound.count() > 1 else 0)
-        self.compound.blockSignals(False)
-        style_popup(self.compound)
-        self._apply_compound()
+        from ui import SHORE_A
+        grades = sorted({c.hardness_shore_a for c in spec_grades(self.seal.currentData())})
+        values = grades or list(SHORE_A)
+        cur = self.hardness.si()
+        self.hardness.blockSignals(True)
+        self.hardness.clear()
+        for h in values:
+            self.hardness.addItem(f"{h:g} ShA", float(h))
+        self.hardness.blockSignals(False)
+        self.hardness.set_si(cur)
 
-    def _apply_compound(self) -> None:
-        """A compound fixes the hardness (datasheet / specification grade)."""
-        from oring_designer.compounds import compounds
+    def _compound(self) -> str | None:
+        from oring_designer.compounds import spec_compound
 
-        cid = self.compound.currentData()
-        c = compounds().get(cid) if cid else None
-        if c is not None and c.hardness_shore_a is not None:
-            self.hardness.set_si(c.hardness_shore_a)
-        self.hardness.setEnabled(c is None or c.hardness_shore_a is None)
+        if dataset().seal_materials[self.seal.currentData()].group != "elastomer":
+            return None
+        c = spec_compound(self.seal.currentData(), self.hardness.si(), self.sil_class.key())
+        return None if c is None else c.id
 
     def _set_visible(self) -> None:
         face = self.gland.key() == "face"
@@ -178,6 +180,11 @@ class CalcPage(Page):
         for w in (self.cs_tol, self.g.itemAtPosition(self.cs_tol_row, 0).widget()):
             w.setVisible(not is_el)
         self.cat_centre.setVisible(self.seal.currentData() in ("ptfe", "pctfe"))
+        for w in (self.duty, self.g.itemAtPosition(self.duty_row, 0).widget()):
+            w.setVisible(not face)
+        sil = self.seal.currentData() == "vmq" and self.hardness.si() in (70.0, 80.0)
+        for w in (self.sil_class, self.cls_grid.itemAtPosition(self.cls_row, 0).widget()):
+            w.setVisible(sil)
         # PTFE / PCTFE rings: face (axial) glands only
         radial_btn = self.gland.group.buttons()[1]
         radial_btn.setEnabled(is_el)
@@ -218,7 +225,8 @@ class CalcPage(Page):
             fluid=self.fluid.currentData(), face_direction=direction, cs_tol_m=cs_tol, target_squeeze=target,
             fill_limit=self.fill_lim.si(), depth_tol_m=self.depth_tol.si(), width_tol_m=self.width_tol.si(),
             install_stretch=self.stretch.si() if gland == "radial" else 0.0,
-            compound=self.compound.currentData(), catalog_thermal_centre=self.cat_centre.isChecked(),
+            compound=self._compound(), catalog_thermal_centre=self.cat_centre.isChecked(),
+            dynamic=gland == "radial" and self.duty.key() == "dynamic",
             round_depth_m=0.0001 * 0.0254 if U.L == "in" else 0.01e-3,
             round_width_m=0.001 * 0.0254 if U.L == "in" else 0.05e-3,
         )
@@ -241,6 +249,10 @@ class CalcPage(Page):
                 notes.append(t("ui.parker_nearest"))
             elif n == "outside_data_range":
                 pass  # listed in the data banner
+            elif n == "trelleborg_housing":
+                pass  # shown in the card captions
+            elif n == "catalog_width_fill":
+                notes.append(t("desktop.catalog_width_fill"))
             elif n in ("ptfe_catalog", "ptfe_catalog_interpolated", "pctfe_ptfe_table"):
                 notes.append(t(f"desktop.{n}"))
             elif n == "catalog_thermal_centre":
@@ -248,7 +260,7 @@ class CalcPage(Page):
                                lo=U.fmt_T(inp.T_min_K), hi=U.fmt_T(inp.T_max_K)))
             elif n == "below_tr10":
                 from oring_designer.compounds import compounds
-                c = compounds()[self.compound.currentData()]
+                c = compounds()[self._compound()]
                 notes.append(t("desktop.below_tr10", name=c.name, T=U.fmt_T(c.tr10_K)))
         self.notes.show_text("\n".join(notes), "error" if {"backup_ring_required", "below_tr10"} & set(res.notes)
                              else "info")
@@ -262,11 +274,17 @@ class CalcPage(Page):
             dlo, dhi = res.depth_dev_m or (-res.depth_tol_m, res.depth_tol_m)
             c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
                      t("desktop.cap_catalog", tol=f"+{Ln(dhi)} / {Ln(dlo)}"))
+        elif res.reference_depth_m is not None:
+            dlo, dhi = res.depth_dev_m or (-res.depth_tol_m, res.depth_tol_m)
+            c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
+                     t("desktop.cap_depth_tb", tol=f"+{Ln(dhi)} / {Ln(dlo)}", ref=Ln(res.reference_depth_m)))
         else:
             c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
                      t("ui.cap_depth", tol=Ln(res.depth_tol_m), a=Ln(pr["depth_min_m"]), b=Ln(pr["depth_max_m"])))
         if res.catalog:
             c[1].set(t("ui.kpi_width"), L(res.width_m), t("desktop.cap_catalog", tol=f"+{Ln(res.width_tol_m)} / 0"))
+        elif "trelleborg_housing" in res.notes:
+            c[1].set(t("ui.kpi_width"), L(res.width_m), t("desktop.cap_tb", tol=f"+{Ln(res.width_tol_m)} / 0"))
         else:
             c[1].set(t("ui.kpi_width"), L(res.width_m),
                      t("ui.cap_width", tol=Ln(res.width_tol_m), gmin=Ln(res.width_min_m), a=Ln(pr["width_min_m"]),
@@ -280,7 +298,7 @@ class CalcPage(Page):
         if gland == "radial":
             c[4].set(t("ui.kpi_machine_depth"), L(res.machine_depth_m), t("ui.cap_machine"))
             c[5].set(t("ui.kpi_clearance"), f"{Ln(res.clearance_m[0])}–{L(res.clearance_m[1])}",
-                     t("ui.cap_clearance", gap=L(res.allowed_gap_m)) if res.allowed_gap_m else
+                     t("desktop.cap_clearance_tb", gap=L(res.allowed_gap_m)) if res.allowed_gap_m else
                      t("ui.cap_clearance_nogap"))
         if gland != "radial":
             c[4].hide()
@@ -290,6 +308,7 @@ class CalcPage(Page):
             c[5].show()
         c[6].set(t("ui.kpi_radius"), L(res.radius_m),
                  t("desktop.cap_catalog", tol="r₁") if res.catalog else
+                 t("desktop.cap_tb", tol="r ±0.2") if "trelleborg_housing" in res.notes else
                  t("ui.cap_radius", a=Ln(pr["radius_min_m"]), b=Ln(pr["radius_max_m"])))
         per_T = res.per_temperature
         lo_row, hi_row = per_T.iloc[0], per_T.iloc[-1]
