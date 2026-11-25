@@ -43,6 +43,11 @@ class CalcPage(Page):
         self.cs_tol_row = add_row(g, t("ui.cs_tol_opt").split(",")[0], self.cs_tol)
         self.gland = radio_row([("face", t("ui.gland_face")), ("radial", t("ui.gland_radial"))], "face")
         add_row(g, t("ui.gland_type"), self.gland)
+        from PySide6.QtWidgets import QCheckBox
+        self.cat_centre = QCheckBox(t("desktop.cat_centre"))
+        self.cat_centre.setChecked(True)
+        self.cat_centre.setToolTip(t("desktop.cat_centre_tip"))
+        g.addWidget(self.cat_centre, g.rowCount(), 0, 1, 3)
         self.direction = radio_row([("internal", t("ui.internal")), ("external", t("ui.external"))], "internal")
         self.dir_row = add_row(g, t("ui.pressure_direction"), self.direction)
         self.g = g
@@ -82,7 +87,7 @@ class CalcPage(Page):
         self.optg = g
         self.end_columns()
 
-        self.watch(self.compound, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
+        self.watch(self.cat_centre, self.compound, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
                    self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.q_manual, self.fluid,
                    self.tmin, self.tmax, self.fill_lim, self.depth_tol, self.width_tol, self.stretch)
 
@@ -172,6 +177,7 @@ class CalcPage(Page):
             w.setVisible(is_el)
         for w in (self.cs_tol, self.g.itemAtPosition(self.cs_tol_row, 0).widget()):
             w.setVisible(not is_el)
+        self.cat_centre.setVisible(self.seal.currentData() == "ptfe")
         for w in (self.stretch, self.optg.itemAtPosition(self.stretch_row, 0).widget()):
             w.setVisible(not face)
         self.cs_custom.setEnabled(self.cs_std.currentData() is None)
@@ -207,7 +213,7 @@ class CalcPage(Page):
             fluid=self.fluid.currentData(), face_direction=direction, cs_tol_m=cs_tol, target_squeeze=target,
             fill_limit=self.fill_lim.si(), depth_tol_m=self.depth_tol.si(), width_tol_m=self.width_tol.si(),
             install_stretch=self.stretch.si() if gland == "radial" else 0.0,
-            compound=self.compound.currentData(),
+            compound=self.compound.currentData(), catalog_thermal_centre=self.cat_centre.isChecked(),
             round_depth_m=0.0001 * 0.0254 if U.L == "in" else 0.01e-3,
             round_width_m=0.001 * 0.0254 if U.L == "in" else 0.05e-3,
         )
@@ -230,6 +236,9 @@ class CalcPage(Page):
                 notes.append(t("ui.parker_nearest"))
             elif n in ("ptfe_catalog", "ptfe_catalog_interpolated"):
                 notes.append(t(f"desktop.{n}"))
+            elif n == "catalog_thermal_centre":
+                notes.append(t("desktop.cat_centre_note", h=U.fmt_L(res.catalog_depth_m), L=U.fmt_L(res.depth_m),
+                               lo=U.fmt_T(inp.T_min_K), hi=U.fmt_T(inp.T_max_K)))
             elif n == "below_tr10":
                 from oring_designer.compounds import compounds
                 c = compounds()[self.compound.currentData()]

@@ -453,6 +453,9 @@ desktop:
   cap_catalog: "{tol} · Trelleborg PTFE O-ring Tablo 48"
   ptfe_catalog: "PTFE yuva ölçüleri (derinlik, genişlik, radyüs) Trelleborg PTFE O-ring Tablo 48'den alındı; program bu ölçüleri tüm sıcaklık ve tolerans köşelerinde kontrol etti."
   ptfe_catalog_interpolated: "Bu kesit Trelleborg Tablo 48'de yok: PTFE yuva ölçüleri tablodaki komşu kesitlerden doğrusal enterpole edildi."
+  cat_centre: "Tablo derinliğini sıcaklık aralığına göre ortala"
+  cat_centre_tip: "Katalog tablosu oda sıcaklığı içindir. İşaretliyse derinlik, en düşük ve en yüksek sıcaklıktaki nominal squeeze'lerin ortalaması tablonun 20 °C squeeze'ine eşit olacak şekilde ayarlanır; genişlik ve radyüs tablodan kalır."
+  cat_centre_note: "Derinlik sıcaklık aralığına göre ortalandı: tablo {h} → {L} ({lo} ve {hi} uçlarındaki nominal squeeze ortalaması tablonun 20 °C değerine eşit)."
   force_manual_used: "Kuvvet, elle girilen {q:.2f} N/mm birim uzunluk kuvvetiyle hesaplandı."
   ring_tol_auto: "AS568'e göre otomatik ({size})"
   ring_tol_tp: "PTFE/PCTFE: elle (varsayılan ±0.1 mm)"
@@ -642,6 +645,10 @@ formulas:
           note: "Monte Carlo: N örnek, tohum (seed) sabitlenebilir; her kontrol için GEÇER/UYARI/KALIR oranı."
         - eq: "ISO 286: sapma = tablo(sınıf, nominal çap);   js/JS = ± IT/2"
           note: "Tablo: JIS B 0401-2 = ISO 286-2, 3–500 mm (Miki Pulley özeti)."
+    - title: "9. Katalog yuvası ve sıcaklık"
+      items:
+        - eq: "[s_nom(T_min) + s_nom(T_max)] / 2 = s_nom,katalog(20 °C)"
+          note: "PTFE yuvası Trelleborg Tablo 48'den alınır (oda sıcaklığı tasarımı). 'Tablo derinliğini sıcaklık aralığına göre ortala' seçiliyse derinlik bu eşitliği sağlayacak şekilde ikiye bölme ile bulunur; genişlik ve radyüs tablodan kalır. Böylece soğuk ve sıcak uçta tablonun amaçladığı squeeze'den eşit sapılır."
     - title: "8. Sıcaklık sınırları"
       items:
         - eq: "T_conta < T_alt → KALIR;   T_alt ≤ T_conta < T_alt + bant → UYARI;   T_conta > T_üst → KALIR"

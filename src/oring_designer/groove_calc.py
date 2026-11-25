@@ -74,6 +74,9 @@ class GrooveInput:
     install_stretch: float = 0.0  # radial: I.D. stretch on the groove bottom
     compound: str | None = None  # seal_compounds.yaml id: formula-based band (compression set)
     ptfe_catalog: bool = True  # PTFE: depth/width/radius from Trelleborg Table 48 when listed
+    # catalogue depth corrected so that the mean of the nominal squeeze at T_min and T_max equals
+    # the catalogue squeeze at T_ref (catalogue tables are room-temperature designs)
+    catalog_thermal_centre: bool = True
     swell: float = 0.0
     n_temperatures: int = 9
     cs_method: str = "volume_centroid"
@@ -106,6 +109,7 @@ class GrooveResult:
     band_basis: str = "parker"  # "formula" (compound compression set), "parker" or "user"
     catalog: str | None = None  # source id when depth / width come from a catalogue table
     depth_dev_m: tuple[float, float] | None = None  # asymmetric depth deviation (catalogue)
+    catalog_depth_m: float | None = None  # catalogue depth before the thermal centring
     parker_band: tuple[float, float] | None = None
 
     @property
@@ -351,6 +355,10 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
 
     if cat is not None:  # catalogue dimensions: checked over temperatures and corners, not solved
         L, G = cat.depth_m, cat.width_m
+        if inp.catalog_thermal_centre and inp.T_min_K != inp.T_max_K:
+            L = _thermal_centre_depth(inp, ds, L, G, R, c_nom)
+            if abs(L - cat.depth_m) > 1e-9:
+                notes.append("catalog_thermal_centre")
         wc = evaluate(L, G)
         status = max(wc.family_status.values(), key=lambda s: _RANK[s])
         return GrooveResult(
@@ -359,6 +367,7 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
             width_min_m=G, width_m=G, width_tol_m=width_tol, radius_m=R, cs_tol_m=cs_tol,
             clearance_m=c, allowed_gap_m=allowed, target=target, fill_limit=fill_limit, wc=wc,
             band_basis=basis, parker_band=_parker_band(inp, rules), catalog=cat.source,
+            catalog_depth_m=cat.depth_m,
             depth_dev_m=depth_dev, per_temperature=_per_temperature(inp, ds, wc), status=status,
             parker_ref=parker, notes=notes,
         )
@@ -394,6 +403,32 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
         band_basis=basis, parker_band=_parker_band(inp, rules),
         per_temperature=per_T, status=status, parker_ref=parker, notes=notes,
     )
+
+
+def _nominal_squeeze(inp: GrooveInput, ds: Dataset, L: float, G: float, R: float, c_nom, T_K: float) -> float:
+    from .checks import run_checks
+
+    st, _ = run_checks(_design(inp, L, G, R, c_nom), ds, ThermalState(T_K, T_K, None, inp.T_ref_K))
+    return (st.squeeze_min + st.squeeze_max) / 2
+
+
+def _thermal_centre_depth(inp: GrooveInput, ds: Dataset, L_cat: float, G: float, R: float, c_nom) -> float:
+    """Depth whose mean nominal squeeze at T_min and T_max equals the catalogue squeeze at T_ref
+    (squeeze decreases with depth: bisection), rounded to ``round_depth_m``."""
+    s_cat = _nominal_squeeze(inp, ds, L_cat, G, R, c_nom, inp.T_ref_K)
+
+    def mean_sq(L: float) -> float:
+        return (_nominal_squeeze(inp, ds, L, G, R, c_nom, inp.T_min_K)
+                + _nominal_squeeze(inp, ds, L, G, R, c_nom, inp.T_max_K)) / 2
+
+    lo, hi = 0.8 * L_cat, min(1.1 * L_cat, 0.995 * inp.cs_m)
+    for _ in range(50):
+        mid = (lo + hi) / 2
+        if mean_sq(mid) > s_cat:
+            lo = mid
+        else:
+            hi = mid
+    return round(((lo + hi) / 2) / inp.round_depth_m) * inp.round_depth_m
 
 
 def _per_temperature(inp: GrooveInput, ds: Dataset, wc: WorstCaseResult) -> pd.DataFrame:
