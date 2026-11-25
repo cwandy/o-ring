@@ -3,7 +3,7 @@ gland for each (desktop version of app/pages/3). Proposals are computed on deman
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QAbstractItemView, QCheckBox, QHBoxLayout, QPushButton, QSpinBox, QWidget
 
 from oring_designer.checks import run_checks
@@ -98,6 +98,9 @@ class SizePage(Page):
         self.run_btn = QPushButton(t("desktop.run_size"))
         self.run_btn.setStyleSheet("font-weight: 600; padding: 6px 14px;")
         self.run_btn.clicked.connect(self._compute)
+        # a new gland type / pressure direction invalidates every proposal: recompute at once
+        for w in (self.kind, self.direction):
+            w.idToggled.connect(lambda _i, on: on and QTimer.singleShot(0, self._compute))
         self.form.addWidget(self.run_btn)
 
         self.watch(self.kind, self.direction, self.D, self.cs_min, self.cs_max, *self.std.values(), self.seal,
@@ -207,7 +210,7 @@ class SizePage(Page):
         self._show_detail()
 
     def _compute(self) -> None:
-        from PySide6.QtCore import Qt
+        from PySide6.QtCore import Qt, QTimer
         from PySide6.QtWidgets import QApplication
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -344,7 +347,7 @@ class SizePage(Page):
         self._design, self._label = p.design, p.size
 
     def _save_pdf(self) -> None:
-        from PySide6.QtCore import Qt
+        from PySide6.QtCore import Qt, QTimer
         from PySide6.QtWidgets import QApplication
 
         from oring_designer.export.report import build_report, to_pdf

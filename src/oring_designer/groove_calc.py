@@ -74,6 +74,7 @@ class GrooveInput:
     install_stretch: float = 0.0  # radial: I.D. stretch on the groove bottom
     compound: str | None = None  # seal_compounds.yaml id: formula-based band (compression set)
     dynamic: bool = False  # radial dynamic (reciprocating) gland: Trelleborg dynamic depth / band
+    backup_rings: int = 0  # radial: 0, 1 or 2 back-up rings (Trelleborg Table 72); face: never
     ptfe_catalog: bool = True  # PTFE: depth/width/radius from Trelleborg Table 48 when listed
     # catalogue depth corrected so that the mean of the nominal squeeze at T_min and T_max equals
     # the catalogue squeeze at T_ref (catalogue tables are room-temperature designs)
@@ -112,6 +113,7 @@ class GrooveResult:
     depth_dev_m: tuple[float, float] | None = None  # asymmetric depth deviation (catalogue)
     catalog_depth_m: float | None = None  # catalogue depth before the thermal centring
     reference_depth_m: float | None = None  # elastomers: Trelleborg Table 23 depth (comparison)
+    backup: object | None = None  # oring_catalog.BackupRing when back-up rings are used
     parker_band: tuple[float, float] | None = None
 
     @property
@@ -244,7 +246,7 @@ def _design(inp: GrooveInput, L: float, G: float, R: float, c_nom: float | None)
     return Design(gland=gland, oring=ORing(ring_id, W), seal_material=inp.seal_material,
                   groove_material=inp.housing_material, pressure_Pa=inp.pressure_Pa,
                   hardness_shore_a=inp.hardness_shore_a, fluid=inp.fluid, cs_method=inp.cs_method,
-                  swell=inp.swell)
+                  swell=inp.swell, backup_rings=inp.backup_rings if inp.gland == "radial" else 0)
 
 
 def _tolerances(inp: GrooveInput, cs_tol: float, depth_tol: float, width_tol: float,
@@ -383,6 +385,25 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
                 notes.append("backup_ring_required")
         c_nom = (c[0] + c[1]) / 2
 
+    bu = None
+    if inp.gland == "radial" and inp.backup_rings:
+        from .oring_catalog import backup_ring
+
+        bu = backup_ring(inp.cs_m, inp.backup_rings, inp.dynamic)
+        if bu is not None:
+            # back-up rings take the extrusion gap: Parker clearance band, no S cap / no warning
+            notes[:] = [n for n in notes if n != "backup_ring_required"]
+            if inp.clearance_m is None:
+                cmin = row.clearance_min_in * INCH
+                c = (cmin, max(row.clearance_max_in * INCH, cmin))
+                c_nom = (c[0] + c[1]) / 2
+            allowed = None
+            R = bu.radius_m if inp.radius_m is None else R
+            width_tol = bu.width_tol_m if inp.width_tol_m is None else width_tol
+            notes.append("backup_ring_table")
+        else:
+            notes.append("backup_ring_no_table")
+
     cat = None
     if seal.id in ("ptfe", "pctfe") and inp.ptfe_catalog and inp.target_squeeze is None:
         from .ptfe_catalog import groove as ptfe_groove
@@ -409,8 +430,10 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
     W = inp.cs_m
     tols = _tolerances(inp, cs_tol, depth_tol, width_tol, c, depth_dev)
 
+    G_bu = (bu.n * bu.ring_thickness_m) if bu is not None else 0.0  # space taken by back-up rings
+
     def evaluate(L: float, G: float) -> WorstCaseResult:
-        return worst_case(_design(inp, L, G, R, c_nom), tols, ds, states)
+        return worst_case(_design(inp, L, G - G_bu, R, c_nom), tols, ds, states)
 
     if cat is not None:  # catalogue dimensions: checked over temperatures and corners, not solved
         L, G = cat.depth_m, cat.width_m
@@ -448,24 +471,29 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
     wc = evaluate(L, G0)
     G_min = max(G0 * wc.output_max["fill"] / fill_limit, 2 * R + 1e-6)
     G_rec = G_min
-    if ecat is not None:  # catalogue groove width (Trelleborg Table 23); fill is checked
+    if bu is not None:  # groove width with back-up ring(s): Table 72 b2 / b3
+        G_rec = bu.groove_width_m
+        if G_min > G_rec + 1e-9:
+            notes.append("catalog_width_fill")
+    elif ecat is not None:  # catalogue groove width (Trelleborg Table 23); fill is checked
         G_rec = ecat.width_m
         if G_min > G_rec + 1e-9:
             notes.append("catalog_width_fill")
     G_min = math.ceil(G_min / inp.round_width_m - 1e-9) * inp.round_width_m
-    if ecat is None:
+    if ecat is None and bu is None:
         G_rec = math.ceil(G_rec / inp.round_width_m - 1e-9) * inp.round_width_m
     wc = evaluate(L, G_rec)
 
     status = max(wc.family_status.values(), key=lambda s: _RANK[s])
     per_T = _per_temperature(inp, ds, wc)
     return GrooveResult(
-        inp=inp, design=_design(inp, L, G_rec, R, c_nom), tolerances=tols, depth_m=L,
+        inp=inp, design=_design(inp, L, G_rec - G_bu, R, c_nom), tolerances=tols, depth_m=L,
         depth_tol_m=depth_tol, machine_depth_m=L - (c_nom / 2 if c_nom else 0.0),
         width_min_m=G_min, width_m=G_rec, width_tol_m=width_tol, radius_m=R, cs_tol_m=cs_tol,
         clearance_m=c, allowed_gap_m=allowed, target=target, fill_limit=fill_limit, wc=wc,
         band_basis=basis, parker_band=_parker_band(inp, rules),
-        reference_depth_m=None if ecat is None else ecat.depth_m, depth_dev_m=depth_dev,
+        reference_depth_m=(bu.housing_depth_m if bu is not None else None if ecat is None else ecat.depth_m),
+        depth_dev_m=depth_dev, backup=bu,
         per_temperature=per_T, status=status, parker_ref=parker, notes=notes,
     )
 

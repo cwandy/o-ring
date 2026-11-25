@@ -136,3 +136,8 @@ references:
     url: "https://www.trelleborg.com/seals"
     accessed: "2026-11-25"
     notes: "docs/varisealhf.pdf supplied by the user."
+  - id: trelleborg_backup_2024
+    citation: "Trelleborg Sealing Solutions, O-Rings & Back-up Rings, Edition June 2024: G.3 Design recommendations, H.1.1 Table 72 (rectangular Back-up Rings BV/BH, PTFE, external sealing, metric)."
+    url: "https://www.trelleborg.com/seals"
+    accessed: "2026-11-25"
+    notes: "Catalogue page images supplied by the user."

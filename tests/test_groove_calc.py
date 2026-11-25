@@ -128,3 +128,17 @@ def test_calculator_page_renders():
     assert not at.exception
     labels = [m.label for m in at.metric]
     assert "Yuva derinliği H" in labels and "Yuva genişliği G" in labels
+
+
+def test_backup_rings_radial_only():
+    base = dict(seal_material="nbr", gland="radial", T_min_K=240, T_max_K=300, pressure_Pa=200e5,
+                hardness_shore_a=70, housing_material="ss304", compound="cm04_nbr70")
+    r0 = calc(**base)
+    assert "backup_ring_required" in r0.notes
+    r1 = calc(**base, backup_rings=1)
+    assert r1.width_m == pytest.approx(6.2e-3) and r1.backup.ring_thickness_m == pytest.approx(1.4e-3)
+    assert "backup_ring_required" not in r1.notes
+    assert any(x.code == "extrusion_backup" for x, _ in r1.wc.worst_results.values())
+    assert calc(**base, backup_rings=2).width_m == pytest.approx(7.6e-3)
+    face = calc(**(base | {"gland": "face"}))  # face: never a back-up ring
+    assert not any(x.code == "backup_investigate" for x, _ in face.wc.worst_results.values())

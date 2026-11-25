@@ -43,6 +43,11 @@ class CalcPage(Page):
         self.duty = radio_row([("static", t("desktop.static")), ("dynamic", t("desktop.dynamic"))], "static")
         self.duty_row = add_row(g, t("desktop.duty"), self.duty)
         from PySide6.QtWidgets import QCheckBox
+        self.bu_on = QCheckBox(t("desktop.backup_on"))
+        g.addWidget(self.bu_on, g.rowCount(), 0, 1, 3)
+        self.bu_n = radio_row([("1", t("desktop.backup_one")), ("2", t("desktop.backup_two"))], "1")
+        self.bu_row = add_row(g, t("desktop.backup_n"), self.bu_n)
+        from PySide6.QtWidgets import QCheckBox
         self.cat_centre = QCheckBox(t("desktop.cat_centre"))
         self.cat_centre.setChecked(True)
         self.cat_centre.setToolTip(t("desktop.cat_centre_tip"))
@@ -88,7 +93,7 @@ class CalcPage(Page):
         self.optg = g
         self.end_columns()
 
-        self.watch(self.groups[self.force_title], self.cat_centre, self.duty, self.sil_class, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
+        self.watch(self.bu_on, self.bu_n, self.groups[self.force_title], self.cat_centre, self.duty, self.sil_class, self.seal, self.housing, self.cs_std, self.cs_custom, self.cs_tol, self.gland, self.direction,
                    self.pressure, self.T_lo, self.T_hi, self.hardness, self.ring_id, self.fluid,
                    self.tmin, self.tmax, self.fill_lim, self.depth_tol, self.width_tol, self.stretch)
 
@@ -183,6 +188,9 @@ class CalcPage(Page):
         self.cat_centre.setVisible(self.seal.currentData() in ("ptfe", "pctfe"))
         for w in (self.duty, self.g.itemAtPosition(self.duty_row, 0).widget()):
             w.setVisible(not face)
+        self.bu_on.setVisible(not face)  # face glands never use back-up rings
+        for w in (self.bu_n, self.g.itemAtPosition(self.bu_row, 0).widget()):
+            w.setVisible(not face and self.bu_on.isChecked())
         sil = self.seal.currentData() == "vmq" and self.hardness.si() in (70.0, 80.0)
         for w in (self.sil_class, self.cls_grid.itemAtPosition(self.cls_row, 0).widget()):
             w.setVisible(sil)
@@ -228,6 +236,7 @@ class CalcPage(Page):
             install_stretch=self.stretch.si() if gland == "radial" else 0.0,
             compound=self._compound(), catalog_thermal_centre=self.cat_centre.isChecked(),
             dynamic=gland == "radial" and self.duty.key() == "dynamic",
+            backup_rings=int(self.bu_n.key()) if gland == "radial" and self.bu_on.isChecked() else 0,
             round_depth_m=0.0001 * 0.0254 if U.L == "in" else 0.01e-3,
             round_width_m=0.001 * 0.0254 if U.L == "in" else 0.05e-3,
         )
@@ -252,6 +261,12 @@ class CalcPage(Page):
                 pass  # listed in the data banner
             elif n == "trelleborg_housing":
                 pass  # shown in the card captions
+            elif n == "backup_ring_table":
+                b = res.backup
+                notes.append(t("desktop.backup_info", n=b.n, W=U.fmt_L(b.ring_width_m), T=U.fmt_L(b.ring_thickness_m),
+                               G=U.fmt_L(b.groove_width_m), d3=U.fmt_L(2 * b.housing_depth_m)))
+            elif n == "backup_ring_no_table":
+                notes.append(t("desktop.backup_no_table"))
             elif n == "catalog_width_fill":
                 notes.append(t("desktop.catalog_width_fill"))
             elif n in ("ptfe_catalog", "ptfe_catalog_interpolated", "ptfe_catalog_extrapolated", "pctfe_ptfe_table"):

@@ -86,3 +86,43 @@ def radial_clearance(cs_m: float, pressure_Pa: float, hardness: float) -> float 
     else:
         s = s70 + (s90 - s70) * (hardness - 70) / 20
     return None if s is None else s * 1e-3
+
+
+# --------------------------------------------------------------------------- back-up rings
+BU_DATA = Path(__file__).resolve().parents[2] / "data" / "trelleborg_backup_ring.yaml"
+
+
+@dataclass(frozen=True)
+class BackupRing:
+    n: int  # 1 or 2
+    ring_width_m: float  # radial height W
+    ring_thickness_m: float  # T
+    housing_depth_m: float  # radial depth = d3 offset / 2
+    groove_width_m: float  # b2 (one ring) or b3 (two rings)
+    width_tol_m: float  # +0.25
+    radius_m: float
+    interpolated: bool
+    source: str
+
+
+@lru_cache(maxsize=1)
+def _bu() -> dict:
+    return yaml.safe_load(BU_DATA.read_text(encoding="utf-8"))
+
+
+def backup_ring(cs_m: float, n: int, dynamic: bool = False) -> BackupRing | None:
+    """Table 72 (external sealing / piston). None outside 1.50-8.40 mm."""
+    d = _bu()
+    rows = np.array(d["rows"], float)
+    mm = cs_m * 1e3
+    if not rows[0, 0] - 0.005 <= mm <= rows[-1, 0] + 0.005:
+        return None
+    exact = np.isclose(rows[:, 0], mm, atol=0.005)
+
+    def val(c):
+        return float(rows[exact][0, c]) if exact.any() else float(np.interp(mm, rows[:, 0], rows[:, c]))
+
+    W = val(1 if dynamic else 2)
+    off = val(4 if dynamic else 5)
+    return BackupRing(n, W * 1e-3, val(3) * 1e-3, off / 2 * 1e-3, val(6 if n == 1 else 7) * 1e-3, 0.25e-3,
+                      val(8) * 1e-3, not exact.any(), d["source"])

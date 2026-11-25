@@ -57,6 +57,7 @@ class Design:
     fluid: str | None = None
     cs_method: CsReductionMethod = "volume_centroid"
     swell: float = 0.0
+    backup_rings: int = 0  # radial glands: 0, 1 or 2 back-up rings (Trelleborg Table 72)
 
 
 def _sev(limit: RuleLimit) -> Status:
@@ -276,14 +277,18 @@ def allowed_extrusion_gap_m(
 
 def check_extrusion(st: GlandState, design: Design, ds: Dataset, seal: SealMaterial) -> list[CheckResult]:
     out: list[CheckResult] = []
+    if st.max_extrusion_gap_m is None:  # face glands: metal-to-metal, no back-up ring (K30)
+        out.append(CheckResult("extrusion_no_gap", Status.PASS))
+        return out
+    if design.backup_rings:
+        out.append(CheckResult("extrusion_backup", Status.PASS, st.max_extrusion_gap_m, None,
+                               {"n": design.backup_rings, "gap_mm": st.max_extrusion_gap_m * 1e3}))
+        return out
     bp = ds.common_rules.backup_ring_check_pressure_Pa
     if bp.value is not None and design.pressure_Pa > bp.value:
         out.append(CheckResult("backup_investigate", _sev(bp), design.pressure_Pa, bp.value,
                                {"p_bar": design.pressure_Pa / 1e5, "limit_bar": bp.value / 1e5},
                                bp.data_quality))
-    if st.max_extrusion_gap_m is None:
-        out.append(CheckResult("extrusion_no_gap", Status.PASS))
-        return out
     if seal.group != "elastomer":
         out.append(CheckResult("extrusion_chart_na", Status.WARN))
         return out
