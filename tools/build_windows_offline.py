@@ -119,7 +119,8 @@ def main() -> int:
     (stage / "BENIOKU.txt").write_bytes(README.format(py=py, sha=sha).replace("\n", "\r\n").encode("utf-8"))
     for extra in ("SPEC.md", "README.md"):
         shutil.copy(ROOT / extra, stage / extra)
-    shutil.copytree(ROOT / "docs", stage / "docs")
+    shutil.copytree(ROOT / "docs", stage / "docs",  # catalogue PDFs are sources, not needed to run
+                    ignore=shutil.ignore_patterns("oring-elastomer.pdf", "varisealhf.pdf", "phase*.png"))
 
     # 4. sanity: only Windows / pure-python binaries
     bad = [p for p in site.rglob("*.so")]
