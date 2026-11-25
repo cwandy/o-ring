@@ -118,6 +118,13 @@ class MainWindow(QMainWindow):
                            " padding: 4px 10px; margin: 4px 8px; font-weight: 600;")
         self.tabs.setCornerWidget(note, Qt.TopRightCorner)
         self.setCentralWidget(self.tabs)
+        credit = QLabel(t("desktop.credit"))
+        credit.setObjectName("credit")
+        credit.setStyleSheet("color: #b4b3ad; font-size: 8pt; padding: 0px 10px;")
+        status = self.statusBar()
+        status.setSizeGripEnabled(False)
+        status.setStyleSheet("QStatusBar { background: transparent; border: none; }")
+        status.addPermanentWidget(credit)
         UNITS.changed.connect(self._refresh_all)
         self._units = UNITS
 

@@ -75,3 +75,13 @@ def test_tolerance_page_renders_schematic():
     at = AppTest.from_file(str(PAGES / "2_Tolerans_Analizi.py")).run(timeout=120)
     assert not at.exception, at.exception
     assert at.get("image")
+
+
+def test_backup_rings_drawn():
+    from oring_designer.viz.schematic import BACKUP, gland_schematic
+
+    dims = {"bore": "50", "width": "4.8", "cs": "3.53"}
+    for kind in ("piston", "rod"):
+        assert BACKUP not in gland_schematic(kind, dims, "mm")
+        assert gland_schematic(kind, dims, "mm", backup=1).count(BACKUP) == 1
+        assert gland_schematic(kind, dims, "mm", backup=2).count(BACKUP) == 2

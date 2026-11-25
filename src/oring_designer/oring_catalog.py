@@ -88,6 +88,12 @@ def radial_clearance(cs_m: float, pressure_Pa: float, hardness: float) -> float 
     return None if s is None else s * 1e-3
 
 
+def clearance_table_pressure_Pa(hardness: float) -> float:
+    """Highest pressure covered by Table 17 for this hardness (the 70 rows below 90 Shore A)."""
+    d = _data()["clearance"]
+    return float(d["90" if hardness >= 90 else "70"][-1][0]) * 1e6
+
+
 # --------------------------------------------------------------------------- back-up rings
 BU_DATA = Path(__file__).resolve().parents[2] / "data" / "trelleborg_backup_ring.yaml"
 

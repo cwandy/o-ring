@@ -588,13 +588,14 @@ class SchematicBox(QFrame):
         self._anchors: dict = {}
 
     def show_gland(self, kind: str, dims: dict, direction: str = "internal", seal: str = "oring",
-                   inputs: dict | None = None) -> None:
+                   inputs: dict | None = None, backup: int = 0) -> None:
         """``inputs``: dimension key -> UnitSpin of the page; those values become input boxes on
         the drawing, linked both ways with the page inputs."""
         inputs = {k: v for k, v in (inputs or {}).items() if k in dims}
         anchors: dict = {}
         self.view.set_svg(gland_schematic(kind, dims, UNITS.L, direction, seal, tiny=True,
-                                          editable=tuple(inputs), anchors_out=anchors))
+                                          editable=tuple(inputs), anchors_out=anchors,
+                                          backup=backup))
         self._anchors = anchors
         for key in list(self._editors):
             if key not in inputs or self._links.get(key) is not inputs[key]:

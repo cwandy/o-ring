@@ -37,6 +37,7 @@ class CalcPage(Page):
         self.cs_tol = UnitSpin("length", 0.1e-3)  # thermoplastic rings only (elastomers: AS568 / ISO table)
         add_row(g, t("ui.cross_section"), self.cs_std)
         add_row(g, t("ui.cs_custom_value"), self.cs_custom)
+        self.cs_custom.edited.connect(self._cs_edited)
         self.cs_tol_row = add_row(g, t("ui.cs_tol_opt").split(",")[0], self.cs_tol)
         self.gland = radio_row([("face", t("ui.gland_face")), ("radial", t("ui.gland_radial"))], "face")
         add_row(g, t("ui.gland_type"), self.gland)
@@ -204,6 +205,12 @@ class CalcPage(Page):
         self.cs_custom.setEnabled(self.cs_std.currentData() is None)
         self.side.setVisible(not face)
 
+    def _cs_edited(self) -> None:
+        """Cross-section typed on the drawing: switch the standard list to 'custom'."""
+        std = self.cs_std.currentData()
+        if std and abs(self.cs_custom.si() - std[1] * 1e-3) > 1e-9:
+            self.cs_std.setCurrentIndex(self.cs_std.count() - 1)
+
     # ---------------------------------------------------------------------- compute
     def recompute(self) -> None:
         self._set_visible()
@@ -214,12 +221,17 @@ class CalcPage(Page):
         gland = self.gland.key()
         direction = self.direction.key() if gland == "face" else "internal"
         std = self.cs_std.currentData()
+        if std:  # keep the custom box (also shown on the drawing) at the standard value
+            self.cs_custom.blockSignals(True)
+            self.cs_custom.set_si(std[1] * 1e-3)
+            self.cs_custom.blockSignals(False)
         cs_m = std[1] * 1e-3 if std else self.cs_custom.si()
         ring_id = self.ring_id.si()
         cs_tol = None if is_el else self.cs_tol.si()  # elastomers: AS568 / ISO 3601-1 table
         sketch = "face" if gland == "face" else "piston"
         pending = {"depth": "…", "width": "…", "radius": "…", "cs": U.num_L(cs_m, cs_tol), "ring_id": U.num_L(ring_id)}
-        self.schematic.show_gland(sketch, pending, direction)
+        bu_n = int(self.bu_n.key()) if gland == "radial" and self.bu_on.isChecked() else 0
+        self.schematic.show_gland(sketch, pending, direction, inputs={"cs": self.cs_custom}, backup=bu_n)
 
         tmin, tmax = self.tmin.si(), self.tmax.si()
         target = (tmin, tmax) if tmin is not None and tmax is not None and tmin < tmax else None
@@ -313,7 +325,8 @@ class CalcPage(Page):
         fluid = self.fluid.currentData()
         if gland == "radial":
             c[4].set(t("ui.kpi_machine_depth"), L(res.machine_depth_m), t("ui.cap_machine"))
-            c[5].set(t("ui.kpi_clearance"), f"{Ln(res.clearance_m[0])}–{L(res.clearance_m[1])}",
+            c0, c1 = res.clearance_m
+            c[5].set(t("ui.kpi_clearance"), L(c1) if abs(c1 - c0) < 1e-12 else f"{Ln(c0)}–{L(c1)}",
                      t("desktop.cap_clearance_tb", gap=L(res.allowed_gap_m)) if res.allowed_gap_m else
                      t("ui.cap_clearance_nogap"))
         if gland != "radial":
@@ -333,12 +346,18 @@ class CalcPage(Page):
                    vhi=hi_row.volume_change))
         self.overall.set_status(res.status)
 
-        gap_txt = f"{Ln(res.clearance_m[0])}–{Ln(res.clearance_m[1])}" if res.clearance_m else None
+        gap_txt = None
+        if res.clearance_m:
+            c0, c1 = res.clearance_m
+            gap_txt = Ln(c1) if abs(c1 - c0) < 1e-12 else f"{Ln(c0)}–{Ln(c1)}"
+        b = res.backup
         self.schematic.show_gland(sketch, {
             "depth": Ln(res.depth_m, res.depth_dev_m or res.depth_tol_m), "width": Ln(res.width_m, (0.0, res.width_tol_m)),
             "radius": Ln(res.radius_m), "cs": Ln(cs_m, res.cs_tol_m), "gap": gap_txt,
             "machine_depth": Ln(res.machine_depth_m) if gland == "radial" else None,
-            "ring_id": Ln(ring_id)}, direction)
+            "ring_id": Ln(ring_id),
+            "backup": f"{b.n} × {Ln(b.ring_width_m)} × {Ln(b.ring_thickness_m)}" if b else None},
+            direction, inputs={"cs": self.cs_custom}, backup=b.n if b else 0)
 
         # section
         panels = []

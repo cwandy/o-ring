@@ -104,6 +104,14 @@ class CheckPage(Page):
         g.addWidget(self.full_ecc, g.rowCount(), 0, 1, 3)
         self.ecc = UnitSpin("length", 0.0)
         self.ecc_row = add_row(g, t("ui.eccentricity"), self.ecc)
+        self.bu_on = QCheckBox(t("desktop.backup_on"))
+        g.addWidget(self.bu_on, g.rowCount(), 0, 1, 3)
+        self.bu_n = radio_row([("1", t("desktop.backup_one")), ("2", t("desktop.backup_two"))], "1")
+        self.bu_row = add_row(g, t("desktop.backup_n"), self.bu_n)
+        self.bu_note = note("")
+        self.bu_note.setWordWrap(True)
+        g.addWidget(self.bu_note, g.rowCount(), 0, 1, 3)
+        self.watch(self.bu_on, self.bu_n)
         self.gg = g
         self.groups[t("ui.gland")].setToolTip(t("desktop.tol_note"))
         # one dimension grid per gland type; only the active one is shown
@@ -333,6 +341,10 @@ class CheckPage(Page):
         for w in (self.direction, self.gg.itemAtPosition(self.dir_row, 0).widget()):
             w.setVisible(face)
         self.full_ecc.setVisible(not face)
+        self.bu_on.setVisible(not face)  # face glands never use back-up rings
+        bu = not face and self.bu_on.isChecked()
+        for w in (self.bu_n, self.gg.itemAtPosition(self.bu_row, 0).widget(), self.bu_note):
+            w.setVisible(bu)
         ecc_on = not face and not self.full_ecc.isChecked()
         for w in (self.ecc, self.gg.itemAtPosition(self.ecc_row, 0).widget()):
             w.setVisible(ecc_on)
@@ -352,14 +364,30 @@ class CheckPage(Page):
         self.side.setVisible(not face)
         self.clear_plot.setVisible(not face)
 
-    def design(self) -> tuple[Design, str, dict[str, Tolerance], float]:
+    def backup(self):
+        """(n, Trelleborg Table 72 ring or None) for a radial gland with back-up rings, else (0, None)."""
+        kind = self.kind.key()
+        if kind == "face" or not self.bu_on.isChecked():
+            return 0, None
+        from oring_designer.oring_catalog import backup_ring
+
+        n = int(self.bu_n.key())
+        return n, backup_ring(self.ring[kind][2].si(), n, False)
+
+    def design(self, full_width: bool = False) -> tuple[Design, str, dict[str, Tolerance], float]:
+        """Design for the checks; with back-up rings the groove width left for the O-ring is
+        G - n*T (``full_width`` keeps the drawn width, e.g. for the DXF)."""
         kind = self.kind.key()
         v = {key: self.dim_value[(kind, key)].si() for key, *_ in DIMS[kind]}
         ecc = None if kind == "face" or self.full_ecc.isChecked() else self.ecc.si()
+        n_bu, bu = self.backup()
+        width = v.get("width", 0.0)
+        if bu is not None and not full_width:
+            width -= n_bu * bu.ring_thickness_m
         if kind == "piston":
-            gland = PistonGland(v["bore"], v["piston"], v["groove_d"], v["width"], v["radius"], ecc)
+            gland = PistonGland(v["bore"], v["piston"], v["groove_d"], width, v["radius"], ecc)
         elif kind == "rod":
-            gland = RodGland(v["rod"], v["throat"], v["groove_d"], v["width"], v["radius"], ecc)
+            gland = RodGland(v["rod"], v["throat"], v["groove_d"], width, v["radius"], ecc)
         else:
             gland = FaceGland(v["groove_id"], v["groove_od"], v["depth"], self.direction.key(), v["radius"])
         rid, rid_t, rcs, rcs_t = self.ring[kind]
@@ -371,7 +399,7 @@ class CheckPage(Page):
                         hardness_shore_a=None if dataset().seal_materials[seal].group == "thermoplastic"
                         else self.hardness.si(),
                         fluid=self.fluid.currentData(), cs_method=self.cs_method.currentData(),
-                        swell=self.swell.si())
+                        swell=self.swell.si(), backup_rings=n_bu)
         tols: dict[str, Tolerance] = {}
         for key, _, _, _, path in DIMS[kind]:
             lo, hi = self.dim_tol[(kind, key)].deviations()
@@ -400,6 +428,12 @@ class CheckPage(Page):
         U = UNITS
         Ln = U.num_L
         g = design.gland
+        n_bu, bu = self.backup()
+        width_drawn = self.dim_value[(kind, "width")].si() if kind != "face" else None
+        if n_bu:
+            self.bu_note.setText(t("desktop.backup_check_info", n=n_bu, W=U.fmt_L(bu.ring_width_m),
+                                   T=U.fmt_L(bu.ring_thickness_m), G=U.fmt_L(g.groove_width_m))
+                                 if bu is not None else t("desktop.backup_no_table"))
 
         def tl(path, value):
             tv = tols.get(path)
@@ -409,14 +443,14 @@ class CheckPage(Page):
             dims = {"bore": tl("gland.bore_diameter_m", g.bore_diameter_m),
                     "piston": tl("gland.piston_diameter_m", g.piston_diameter_m),
                     "groove_d": tl("gland.groove_diameter_m", g.groove_diameter_m),
-                    "width": tl("gland.groove_width_m", g.groove_width_m),
+                    "width": tl("gland.groove_width_m", width_drawn),
                     "depth": Ln((g.bore_diameter_m - g.groove_diameter_m) / 2),
                     "gap": Ln(g.bore_diameter_m - g.piston_diameter_m)}
         elif kind == "rod":
             dims = {"rod": tl("gland.rod_diameter_m", g.rod_diameter_m),
                     "throat": tl("gland.throat_diameter_m", g.throat_diameter_m),
                     "groove_d": tl("gland.groove_diameter_m", g.groove_diameter_m),
-                    "width": tl("gland.groove_width_m", g.groove_width_m),
+                    "width": tl("gland.groove_width_m", width_drawn),
                     "depth": Ln((g.groove_diameter_m - g.rod_diameter_m) / 2),
                     "gap": Ln(g.throat_diameter_m - g.rod_diameter_m)}
         else:
@@ -426,7 +460,10 @@ class CheckPage(Page):
                  "ring_id": tl("oring.id_m", design.oring.id_m)}
         inputs = {key: self.dim_value[(kind, key)] for key, *_ in DIMS[kind]}
         inputs["cs"] = self.ring[kind][2]
-        self.schematic.show_gland(kind, dims, getattr(g, "pressure_direction", "internal"), inputs=inputs)
+        if bu is not None:
+            dims["backup"] = f"{n_bu} × {Ln(bu.ring_width_m)} × {Ln(bu.ring_thickness_m)}"
+        self.schematic.show_gland(kind, dims, getattr(g, "pressure_direction", "internal"), inputs=inputs,
+                                  backup=n_bu)
 
         ds = self._dataset(design, kind)
         T_ref = U.T_ref_K
@@ -649,6 +686,6 @@ class CheckPage(Page):
         from oring_designer.export.dxf import gland_profile, to_bytes
 
         path = save_bytes(self, t("ui.download_dxf"), "yuva_profili.dxf", "DXF (*.dxf)",
-                          to_bytes(gland_profile(self._design, UNITS.L, "")))
+                          to_bytes(gland_profile(self.design(full_width=True)[0], UNITS.L, "")))
         if path:
             self.out_msg.setText(t("desktop.saved", path=path))

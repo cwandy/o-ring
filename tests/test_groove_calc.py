@@ -37,9 +37,9 @@ def test_face_depth_matches_parker_chart_4_3():
 def test_radial_depth_matches_parker_chart_4_2():
     r = calc(gland="radial", seal_material="nbr")
     assert 0.111 * IN <= r.depth_m <= 0.113 * IN
-    # clearance max = Trelleborg Table 17 S (70 ShA, <= 3.5 MPa, 3-5 mm: 0.10 mm) (K29)
-    assert r.clearance_m == pytest.approx((0.003 * IN, 0.10e-3))
-    c_nom = (0.003 * IN + 0.10e-3) / 2
+    # diametral clearance = Trelleborg Table 17 S (70 ShA, <= 3.5 MPa, 3-5 mm: 0.10 mm) (K29)
+    assert r.clearance_m == pytest.approx((0.10e-3, 0.10e-3))
+    c_nom = 0.10e-3
     assert r.machine_depth_m == pytest.approx(r.depth_m - c_nom / 2)
 
 

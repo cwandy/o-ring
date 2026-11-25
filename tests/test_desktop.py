@@ -179,3 +179,31 @@ def test_schematic_input_boxes_linked_both_ways(window):
     src.set_si(50e-3)
     page._run()  # and the other way round
     assert page.schematic._editors["bore"].si() == pytest.approx(50e-3)
+
+
+def test_check_page_backup_ring_reduces_width(window):
+    page = window.pages[1]
+    page.kind.group.buttons()[0].setChecked(True)
+    page.bu_on.setChecked(True)
+    page._run()
+    assert page.error.isHidden(), page.error.text()
+    design = page.design()[0]
+    assert design.backup_rings == 1
+    # 3.53 mm ring: Trelleborg Table 72 T = 1.4 mm
+    assert design.gland.groove_width_m == pytest.approx(4.8e-3 - 1.4e-3)
+    assert page.design(full_width=True)[0].gland.groove_width_m == pytest.approx(4.8e-3)
+    page.bu_on.setChecked(False)
+    page._run()
+
+
+def test_calc_cross_section_editable_on_drawing(window):
+    page = window.pages[0]
+    page._run()
+    ed = page.schematic._editors["cs"]
+    assert ed.si() == pytest.approx(3.53e-3)
+    ed.set_si(2.8e-3)
+    ed.edited.emit()
+    assert page.cs_std.currentData() is None  # switched to the custom value
+    assert page.cs_custom.si() == pytest.approx(2.8e-3)
+    page.cs_std.setCurrentIndex(page.cs_std.findText("3.53", flags=__import__("PySide6.QtCore").QtCore.Qt.MatchContains))
+    page._run()

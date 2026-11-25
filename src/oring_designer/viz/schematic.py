@@ -24,6 +24,7 @@ from ..i18n import t
 INK = "#1f1f1d"
 INK_2 = "#52514e"
 RING = "#2a78d6"
+BACKUP = "#e3a33a"  # back-up ring (PTFE)
 PRESSURE = "#d03b2f"
 W = 640  # drawing width (px of the viewBox)
 XR = 620  # right edge of the parts
@@ -33,7 +34,7 @@ SYMBOL = {
     "bore": "ØA", "piston": "ØC", "groove_d": "ØB", "rod": "ØD", "throat": "ØT",
     "groove_id": "ØD₁", "groove_od": "ØD₂", "width": "G", "depth": "L", "radius": "R",
     "cs": "W", "gap": "E", "ring_id": "d₁", "machine_depth": "Lₘ", "seal_h": "h", "seal_b": "b",
-    "static_d": "Øs",
+    "static_d": "Øs", "backup": "BU",
 }
 ROD_GROOVE = "ØF"  # groove diameter of a rod gland
 
@@ -200,9 +201,31 @@ def _radius_leader(svg: _Svg, px: float, py: float, tx: float, ty: float, label:
     svg.text(tx, ty, label, size=15, anchor=anchor)
 
 
-def _seal_vertical(svg: _Svg, dims: dict, seal: str, g0: float, g1: float, xa: float, xb: float) -> None:
+def _backup_rings(svg: _Svg, g0: float, g1: float, xa: float, xb: float, n: int,
+                  gap_x: float, text_side: str) -> tuple[float, float]:
+    """Draw ``n`` back-up rings (1: low-pressure side at the bottom, 2: both sides) across the
+    groove depth xa..xb; return the axial span left for the O-ring."""
+    if n <= 0:
+        return g0, g1
+    bt = (g1 - g0) * 0.15
+    ends = [(g1 - bt, g1)] if n == 1 else [(g0, g0 + bt), (g1 - bt, g1)]
+    for y0, y1 in ends:
+        svg.add(f'<rect x="{xa:.1f}" y="{y0:.1f}" width="{xb - xa:.1f}" height="{y1 - y0:.1f}" fill="{BACKUP}" '
+                f'fill-opacity="0.75" stroke="#9a6a12" stroke-width="1.6"/>')
+    if n == 1:
+        # pressure from the top: the back-up ring sits on the low-pressure side
+        svg.line(gap_x, g0 - 40, gap_x, g0 - 4, color=PRESSURE, width=2.2, end=True, marker="ap")
+        tx = gap_x - 12 if text_side == "left" else gap_x + 12
+        svg.text(tx, g0 - 20, t("schematic.pressure"), size=14, color=PRESSURE,
+                 anchor="end" if text_side == "left" else "start")
+    return (g0 + bt if n == 2 else g0), g1 - bt
+
+
+def _seal_vertical(svg: _Svg, dims: dict, seal: str, g0: float, g1: float, xa: float, xb: float,
+                   backup: int = 0, gap_x: float = 0.0, text_side: str = "left") -> None:
     """Seal in a radial groove drawn with a vertical axis: the groove spans g0..g1 axially (y),
     the seal is squeezed between xa and xb radially (x). Spring jacket opens upwards."""
+    g0, g1 = _backup_rings(svg, g0, g1, xa, xb, backup, gap_x, text_side)
     gw, d = g1 - g0, xb - xa
     cx, cy = (xa + xb) / 2, (g0 + g1) / 2
     if seal == "spring":
@@ -214,7 +237,7 @@ def _seal_vertical(svg: _Svg, dims: dict, seal: str, g0: float, g1: float, xa: f
         svg.add(f'<g transform="matrix(0,1,1,0,{xa:.1f},{g0:.1f})">{"".join(inner.parts)}</g>')
         # b and h are listed in the legend (no room on the drawing next to the gap label)
     else:
-        _ring(svg, cx, cy, d / 2, gw * 0.86 / 2)
+        _ring(svg, cx, cy, d / 2, gw * (0.96 if backup else 0.86) / 2)
         svg.text(cx, cy + 5, _label(SYMBOL["cs"], dims, "cs"), size=15, anchor="middle")
 
 
@@ -229,7 +252,7 @@ def _radial_dia(svg: _Svg, ax: float, y: float, x_to: float, label: str) -> None
     svg.text(ax + 10, y - 7, label)
 
 
-def _piston(svg: _Svg, dims: dict, seal: str) -> None:
+def _piston(svg: _Svg, dims: dict, seal: str, backup: int = 0) -> None:
     """Piston gland, axis vertical: piston on the left, cylinder wall on the right."""
     ax, x_gb, x_od, x_bore = 40, 310, 400, 414
     g0, g1, top, bot = 150, 270, 24, 344
@@ -237,7 +260,7 @@ def _piston(svg: _Svg, dims: dict, seal: str) -> None:
     svg.poly([(ax, top), (x_od, top), (x_od, g0), (x_gb + r, g0), (x_gb, g0 + r), (x_gb, g1 - r),
               (x_gb + r, g1), (x_od, g1), (x_od, bot), (ax, bot)], "url(#hA)")  # piston
     svg.poly([(x_bore, top), (XR, top), (XR, bot), (x_bore, bot)], "url(#hB)")  # cylinder
-    _seal_vertical(svg, dims, seal, g0, g1, x_gb, x_bore)
+    _seal_vertical(svg, dims, seal, g0, g1, x_gb, x_bore, backup, (x_od + x_bore) / 2, "left")
     _axis_vertical(svg, ax)
     if "bore" in dims:
         _radial_dia(svg, ax, 62, x_bore, _label("ØA", dims, "bore"))
@@ -261,7 +284,7 @@ def _piston(svg: _Svg, dims: dict, seal: str) -> None:
         _radius_leader(svg, x_gb + 3, g1 - 3, 292, 288, _label("R", dims, "radius"))
 
 
-def _rod(svg: _Svg, dims: dict, seal: str) -> None:
+def _rod(svg: _Svg, dims: dict, seal: str, backup: int = 0) -> None:
     """Rod gland, axis vertical: rod on the left, housing with the groove on the right."""
     ax, x_rod, x_thr, x_gb = 40, 290, 302, 406
     g0, g1, top, bot = 150, 270, 24, 344
@@ -269,7 +292,7 @@ def _rod(svg: _Svg, dims: dict, seal: str) -> None:
     svg.poly([(ax, top), (x_rod, top), (x_rod, bot), (ax, bot)], "url(#hB)")  # rod
     svg.poly([(x_thr, top), (XR, top), (XR, bot), (x_thr, bot), (x_thr, g1), (x_gb - r, g1), (x_gb, g1 - r),
               (x_gb, g0 + r), (x_gb - r, g0), (x_thr, g0)], "url(#hA)")  # housing
-    _seal_vertical(svg, dims, seal, g0, g1, x_rod, x_gb)
+    _seal_vertical(svg, dims, seal, g0, g1, x_rod, x_gb, backup, (x_rod + x_thr) / 2, "right")
     _axis_vertical(svg, ax)
     if "rod" in dims:
         _radial_dia(svg, ax, 62, x_rod, _label("ØD", dims, "rod"))
@@ -338,9 +361,10 @@ def _face(svg: _Svg, dims: dict, seal: str, direction: str) -> None:
 
 def gland_schematic(kind: str, dims: dict[str, str | None], unit: str, direction: str = "internal",
                     seal: str = "oring", tiny: bool = False, editable: tuple[str, ...] = (),
-                    anchors_out: dict | None = None) -> str:
+                    anchors_out: dict | None = None, backup: int = 0) -> str:
     """SVG text of the dimensioned schematic. ``dims`` values are already formatted (no unit).
 
+    ``backup`` = number of back-up rings drawn in a radial groove (0, 1 or 2).
     ``editable`` keys are drawn without their value; the viewBox position of the value
     (top-left of an input box) is returned in ``anchors_out`` together with the viewBox size."""
     dims = {k: v for k, v in dims.items() if v is not None}
@@ -348,9 +372,9 @@ def gland_schematic(kind: str, dims: dict[str, str | None], unit: str, direction
     _EDITABLE.update(editable)
     svg = _Svg(tiny)
     if kind == "piston":
-        _piston(svg, dims, seal)
+        _piston(svg, dims, seal, backup)
     elif kind == "rod":
-        _rod(svg, dims, seal)
+        _rod(svg, dims, seal, backup)
     elif kind == "face":
         _face(svg, dims, seal, direction)
     else:

@@ -369,21 +369,21 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
             notes.append("trelleborg_housing")
     if inp.gland == "radial" and seal.group == "elastomer" and inp.clearance_m is None \
             and inp.hardness_shore_a is not None:
-        from .oring_catalog import radial_clearance
+        from .oring_catalog import clearance_table_pressure_Pa, radial_clearance
 
+        # diametral clearance = Trelleborg Table 17 S_max (full eccentricity: one-sided gap = S)
         S = radial_clearance(inp.cs_m, inp.pressure_Pa, inp.hardness_shore_a)
-        allowed = S
-        cmin = c[0]
-        if S is None:
+        if S is None:  # above the table: last tabulated pressure row, back-up ring needed
+            S = radial_clearance(inp.cs_m, clearance_table_pressure_Pa(inp.hardness_shore_a),
+                                 inp.hardness_shore_a)
+            notes.append("clearance_table_edge")
             if "backup_ring_required" not in notes:
                 notes.append("backup_ring_required")
-            c = (cmin, cmin)
         else:
-            # full eccentricity: one-sided gap = diametral clearance -> c_max = S (Table 17)
-            c = (min(cmin, S), min(max(c[1], cmin), S))
-            if S < cmin and "backup_ring_required" not in notes:
-                notes.append("backup_ring_required")
-        c_nom = (c[0] + c[1]) / 2
+            notes[:] = [n for n in notes if n != "backup_ring_required"]
+        allowed = S
+        c = (S, S)
+        c_nom = S
 
     bu = None
     if inp.gland == "radial" and inp.backup_rings:
@@ -391,13 +391,8 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
 
         bu = backup_ring(inp.cs_m, inp.backup_rings, inp.dynamic)
         if bu is not None:
-            # back-up rings take the extrusion gap: Parker clearance band, no S cap / no warning
+            # back-up rings take the extrusion gap; the clearance stays Trelleborg S_max
             notes[:] = [n for n in notes if n != "backup_ring_required"]
-            if inp.clearance_m is None:
-                cmin = row.clearance_min_in * INCH
-                c = (cmin, max(row.clearance_max_in * INCH, cmin))
-                c_nom = (c[0] + c[1]) / 2
-            allowed = None
             R = bu.radius_m if inp.radius_m is None else R
             width_tol = bu.width_tol_m if inp.width_tol_m is None else width_tol
             notes.append("backup_ring_table")
