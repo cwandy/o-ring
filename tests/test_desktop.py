@@ -164,3 +164,18 @@ def test_spring_catalogue_mode(window):
     page._run()
     assert page.error.isHidden(), page.error.text()
     assert "DVE3" in page.cat_banner.text() and page.m_depth.si() == pytest.approx(4.7e-3)  # 50 mm: DVE3
+
+
+def test_schematic_input_boxes_linked_both_ways(window):
+    page = window.pages[1]
+    page.kind.group.buttons()[0].setChecked(True)
+    page._run()
+    ed = page.schematic._editors["bore"]
+    src = page.dim_value[("piston", "bore")]
+    assert ed.si() == pytest.approx(src.si())
+    ed.set_si(51e-3)
+    ed.edited.emit()  # typing on the drawing updates the input on the left
+    assert src.si() == pytest.approx(51e-3)
+    src.set_si(50e-3)
+    page._run()  # and the other way round
+    assert page.schematic._editors["bore"].si() == pytest.approx(50e-3)

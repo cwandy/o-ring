@@ -113,6 +113,10 @@ class MainWindow(QMainWindow):
         self.pages = [CalcPage(), CheckPage(), SizePage(), SpringPage()]
         for page, key in zip(self.pages, ("ui.page_calc", "ui.page_check", "ui.page_size", "ui.page_se")):
             self.tabs.addTab(scroll(page), t(key))
+        note = QLabel(t("desktop.disclaimer"))
+        note.setStyleSheet("color: #8a5a00; background: #fff4d6; border: 1px solid #eda100; border-radius: 6px;"
+                           " padding: 4px 10px; margin: 4px 8px; font-weight: 600;")
+        self.tabs.setCornerWidget(note, Qt.TopRightCorner)
         self.setCentralWidget(self.tabs)
         UNITS.changed.connect(self._refresh_all)
         self._units = UNITS

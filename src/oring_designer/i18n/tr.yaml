@@ -478,6 +478,8 @@ desktop:
   force_tp: "PTFE/PCTFE ezilme kuvveti veri sayfasından hesaplandı: elastik (Lindley, E = {E:.0f} MPa), temas basıncı akma gerilmesiyle ({sf:.1f} MPa) sınırlı."
   clamp_cap: "o-ring ezme {c} + basınç ayırma {p}"
   force_group: "Kuvvet hesabı (sıkıştırma ve flanş sıkma)"
+  disclaimer: "⚠ Verilen bilgiler teorik olup test ile doğrulanmalıdır."
+  edit_on_drawing: "Şema üzerinden düzenlenebilir; soldaki girdiyle bağlıdır."
   force_manual_used: "Kuvvet, elle girilen {q:.2f} N/mm birim uzunluk kuvvetiyle hesaplandı."
   ring_tol_auto: "AS568'e göre otomatik ({size})"
   ring_tol_tp: "PTFE/PCTFE: elle (varsayılan ±0.1 mm)"

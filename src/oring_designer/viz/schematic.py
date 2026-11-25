@@ -64,6 +64,7 @@ class _Svg:
     def __init__(self, tiny: bool = False) -> None:
         self.parts: list[str] = []
         self.tiny = tiny
+        self.anchors: dict[str, tuple[float, float]] = {}
 
     def add(self, s: str) -> None:
         self.parts.append(s)
@@ -98,6 +99,13 @@ class _Svg:
 
     def text(self, x, y, s: str, size: int = 16, anchor: str = "start", weight: str = "600",
              color: str = INK, halo: bool = True) -> None:
+        if isinstance(s, _Lab) and s.key in _EDITABLE:
+            # symbol + input box (EDIT_W wide) occupy the place of the original label
+            w_sym = 0.62 * size * len(s.sym)  # approximate advance of the symbol
+            total = w_sym + 4 + EDIT_W
+            x = {"start": x, "middle": x - total / 2, "end": x - total}[anchor]
+            anchor = "start"
+            self.anchors[s.key] = (x + w_sym + 4, y - size * 0.95)  # top-left of the input box
         common = (f'x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}" '
                   f'font-weight="{weight}"')
         if halo:
@@ -106,9 +114,28 @@ class _Svg:
         self.add(f'<text {common} fill="{color}">{escape(s)}</text>')
 
 
+EDIT_W = 84.0  # width of an input box on the drawing, viewBox units
+EDIT_H = 22.0
+
+
+class _Lab(str):
+    """Label text that remembers its dimension key (for editable overlays)."""
+
+    key: str = ""
+    sym: str = ""
+
+
+_EDITABLE: set[str] = set()
+
+
 def _label(sym: str, dims: dict, key: str) -> str:
     v = dims.get(key)
-    return f"{sym} {v.split()[0]}" if v else sym  # nominal only; tolerances are in the legend
+    if key in _EDITABLE:  # the value is shown in an input box placed over the drawing
+        out = _Lab(sym + " ")
+    else:
+        out = _Lab(f"{sym} {v.split()[0]}" if v else sym)  # nominal only; tolerances in the legend
+    out.key, out.sym = key, sym
+    return out
 
 
 def _ring(svg: _Svg, cx: float, cy: float, rx: float, ry: float) -> None:
@@ -310,9 +337,15 @@ def _face(svg: _Svg, dims: dict, seal: str, direction: str) -> None:
 
 
 def gland_schematic(kind: str, dims: dict[str, str | None], unit: str, direction: str = "internal",
-                    seal: str = "oring", tiny: bool = False) -> str:
-    """SVG text of the dimensioned schematic. ``dims`` values are already formatted (no unit)."""
+                    seal: str = "oring", tiny: bool = False, editable: tuple[str, ...] = (),
+                    anchors_out: dict | None = None) -> str:
+    """SVG text of the dimensioned schematic. ``dims`` values are already formatted (no unit).
+
+    ``editable`` keys are drawn without their value; the viewBox position of the value
+    (top-left of an input box) is returned in ``anchors_out`` together with the viewBox size."""
     dims = {k: v for k, v in dims.items() if v is not None}
+    _EDITABLE.clear()
+    _EDITABLE.update(editable)
     svg = _Svg(tiny)
     if kind == "piston":
         _piston(svg, dims, seal)
@@ -340,6 +373,11 @@ def gland_schematic(kind: str, dims: dict[str, str | None], unit: str, direction
     svg.text(W - 20, total_h - 8, t("schematic.not_to_scale"), size=13, anchor="end", weight="400",
              color=INK_2, halo=False)
     body = "".join(svg.parts)
+    _EDITABLE.clear()
+    if anchors_out is not None:
+        anchors_out.clear()
+        anchors_out.update(svg.anchors)
+        anchors_out["_viewbox"] = (W, total_h)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {total_h}" width="100%" '
             f'font-family="Segoe UI, Helvetica, Arial, sans-serif">'
             f'<rect width="{W}" height="{total_h}" fill="#ffffff"/>{_defs(tiny)}{body}</svg>')

@@ -201,7 +201,7 @@ class SizePage(Page):
                 known = {"piston": "bore", "rod": "rod"}.get(kind) or ("groove_od" if direction == "internal"
                                                                        else "groove_id")
                 self.schematic.show_gland(kind, {known: UNITS.num_L(self.D.si()), "width": "…", "depth": "…",
-                                                 "cs": "…", "ring_id": "…"}, direction)
+                                                 "cs": "…", "ring_id": "…"}, direction, inputs={known: self.D})
         elif self._inp is None:
             self.stale.show_text("")
         self._show_detail()
@@ -291,7 +291,8 @@ class SizePage(Page):
         sk |= {"radius": U.num_L(p.radius_m), "gap": U.num_L(p.clearance_m),
                "cs": U.num_L(p.ring.cs_m, p.ring_tol[1]), "ring_id": U.num_L(p.ring.id_m, p.ring_tol[0])}
         direction = inp.face_pressure_direction if kind == "face" else "internal"
-        self.schematic.show_gland(kind, sk, direction)
+        dkey = {"piston": "bore", "rod": "rod"}.get(kind) or ("groove_od" if direction == "internal" else "groove_id")
+        self.schematic.show_gland(kind, sk, direction, inputs={dkey: self.D})
 
         self.detail_title.setText(f"{t('ui.proposal_detail')}: {p.size} — {U.fmt_L(p.ring.id_m)} × {U.fmt_L(p.ring.cs_m)}")
         rows = []

@@ -583,8 +583,77 @@ class SchematicBox(QFrame):
         self.view = SvgView()
         lay.addWidget(self.view)
 
-    def show_gland(self, kind: str, dims: dict, direction: str = "internal", seal: str = "oring") -> None:
-        self.view.set_svg(gland_schematic(kind, dims, UNITS.L, direction, seal, tiny=True))
+        self._editors: dict[str, QDoubleSpinBox] = {}
+        self._links: dict[str, "UnitSpin"] = {}
+        self._anchors: dict = {}
+
+    def show_gland(self, kind: str, dims: dict, direction: str = "internal", seal: str = "oring",
+                   inputs: dict | None = None) -> None:
+        """``inputs``: dimension key -> UnitSpin of the page; those values become input boxes on
+        the drawing, linked both ways with the page inputs."""
+        inputs = {k: v for k, v in (inputs or {}).items() if k in dims}
+        anchors: dict = {}
+        self.view.set_svg(gland_schematic(kind, dims, UNITS.L, direction, seal, tiny=True,
+                                          editable=tuple(inputs), anchors_out=anchors))
+        self._anchors = anchors
+        for key in list(self._editors):
+            if key not in inputs or self._links.get(key) is not inputs[key]:
+                self._editors.pop(key).deleteLater()
+                self._links.pop(key, None)
+        for key, src in inputs.items():
+            ed = self._editors.get(key)
+            if ed is None:
+                ed = UnitSpin("length", src.si(), parent=self.view)
+                ed.setMinimumWidth(10)
+                ed.setMaximumWidth(1000)
+                ed.setAlignment(Qt.AlignCenter)
+                ed.setStyleSheet("QDoubleSpinBox { background: white; border: 1px solid #2a78d6;"
+                                 " border-radius: 3px; padding: 0px 2px; min-height: 0px; color: #1d3557;"
+                                 " font-weight: 600; }"
+                                 " QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 0px; border: none; }")
+                ed.setToolTip(t("desktop.edit_on_drawing"))
+                ed.edited.connect(lambda ed=ed, src=src: self._push(ed, src))
+                self._editors[key], self._links[key] = ed, src
+            if abs(ed.si() - src.si()) > 1e-12:
+                ed.blockSignals(True)
+                ed.set_si(src.si())
+                ed.blockSignals(False)
+            ed.setSuffix("")
+            ed.show()
+        self._place()
+
+    @staticmethod
+    def _push(ed, src) -> None:
+        if abs(src.si() - ed.si()) > 1e-12:
+            src.set_si(ed.si())
+            src.edited.emit()
+
+    def _place(self) -> None:
+        if not self._editors or "_viewbox" not in self._anchors:
+            return
+        vw, vh = self._anchors["_viewbox"]
+        w = self.view.width()
+        h = w * vh / vw
+        if h > self.view.height():
+            h = self.view.height()
+            w = h * vw / vh
+        k = w / vw
+        x_off = (self.view.width() - w) / 2
+        from oring_designer.viz.schematic import EDIT_H, EDIT_W
+
+        for key, ed in self._editors.items():
+            if key not in self._anchors:
+                ed.hide()
+                continue
+            ax, ay = self._anchors[key]
+            ed.setGeometry(int(x_off + ax * k), int(ay * k), max(int(EDIT_W * k), 48), max(int(EDIT_H * k), 18))
+            f = ed.font()
+            f.setPixelSize(max(int(14 * k), 10))
+            ed.setFont(f)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        QTimer.singleShot(0, self._place)
 
 
 class PlotHolder(QWidget):

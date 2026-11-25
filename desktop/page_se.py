@@ -183,7 +183,8 @@ class SpringPage(Page):
         sk["width"] = Ln(width) + (" min" if face else " +0.2/0")
         if seal_on:
             sk |= {"seal_h": Ln(h), "seal_b": Ln(b)}
-        self.schematic.show_gland(kind, sk, direction, seal="spring")
+        dkey = {"piston": "bore", "rod": "rod"}.get(kind) or ("groove_od" if direction == "internal" else "groove_id")
+        self.schematic.show_gland(kind, sk, direction, seal="spring", inputs={dkey: self.D})
 
         limits = SeLimits(extrusion_gap_max_m=None if face else s_max, gap_quality=DataQuality.VENDOR)
         design = SeDesign(gland=SeGland(kind, 0.0 if face else D, part, groove_d, width, depth, direction, None),

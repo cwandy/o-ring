@@ -424,7 +424,9 @@ class CheckPage(Page):
                     "width": Ln((g.groove_od_m - g.groove_id_m) / 2), "depth": tl("gland.groove_depth_m", g.groove_depth_m)}
         dims |= {"radius": tl("gland.corner_radius_m", g.corner_radius_m), "cs": tl("oring.cs_m", design.oring.cs_m),
                  "ring_id": tl("oring.id_m", design.oring.id_m)}
-        self.schematic.show_gland(kind, dims, getattr(g, "pressure_direction", "internal"))
+        inputs = {key: self.dim_value[(kind, key)] for key, *_ in DIMS[kind]}
+        inputs["cs"] = self.ring[kind][2]
+        self.schematic.show_gland(kind, dims, getattr(g, "pressure_direction", "internal"), inputs=inputs)
 
         ds = self._dataset(design, kind)
         T_ref = U.T_ref_K
