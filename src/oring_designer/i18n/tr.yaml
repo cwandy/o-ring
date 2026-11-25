@@ -405,7 +405,7 @@ ui:
   method_items:
     - "Hedef squeeze bandı: Parker Design Chart 4-2 (radyal) / 4-3 (face) — kesite en yakın satır. Termoplastiklerde kullanıcı girer."
     - "Derinlik: tüm sıcaklıklar (T_min…T_max) ve tolerans köşelerindeki (kesit ±, derinlik ±, boşluk bandı, tam eksantriklik) squeeze aralığı hedef bandın ortasına gelecek şekilde ikiye bölme ile bulunur; 0.01 mm'ye yuvarlanır."
-    - "Genişlik: en az genişlik en kötü durumdaki doluluğu sınıra (varsayılan %85) eşitler; önerilen genişlik ayrıca referans sıcaklığında nominal doluluğu %75 yapar (Parker 3.7); 0.05 mm yukarı yuvarlanır."
+    - "Genişlik: tüm sıcaklık ve tolerans köşelerinde doluluğu sınırı (varsayılan %85, Parker 3.7; 'Ek girdiler'den değiştirilebilir) aşmayan en dar genişlik; 0.05 mm yukarı yuvarlanır."
     - "Toleranslar: derinlik ve genişlik toleransı Parker tablolarındaki L ve G aralıklarından, kesit toleransı AS568 / ISO 3601-1 tablosundan alınır."
     - "Termal: o-ring ve gövde kendi ΔL/L tablolarıyla (NIST, NBS Monograph 29, Kirby 1956) ölçeklenir; sabit CTE kullanılmaz."
     - "Radyal boşluk: Parker Design Chart 4-2 E aralığı; üst sınırı basınç ve sertliğe göre Parker Şekil 3-2 ekstrüzyon sınırıyla kesilir (silikonda yarıya indirilir)."
@@ -627,7 +627,7 @@ formulas:
           note: "Veri sayfasında TR10 (ISO 2921) varsa, altındaki sıcaklıkta o-ring geri dönemediği için uyarı verilir."
         - eq: "L: tüm sıcaklık × tolerans köşelerinde squeeze aralığının ortası = hedef bandın ortası (ikiye bölme)"
           note: "Hedef band: Parker Design Chart 4-2 / 4-3 (kesite en yakın satır); 0.01 mm'ye yuvarlanır."
-        - eq: "G_min: en kötü doluluk = doluluk sınırı;   G_önerilen: T_ref'te nominal doluluk = %75"
+        - eq: "G = G_tasarım · doluluk_maks / doluluk_sınırı  (en kötü köşede doluluk = sınır),  G ≥ 2R"
           note: "Doluluk sınırı varsayılan %85; 0.05 mm yukarı yuvarlanır."
     - title: "7. Tolerans analizi"
       items:

@@ -44,8 +44,8 @@ def test_width_satisfies_fill_limit():
     r = calc(gland="face", T_min_K=220, T_max_K=300, housing_material="al6061")
     assert r.fill_max <= r.fill_limit + 1e-9
     assert r.width_m >= r.width_min_m
-    nominal = r.nominal_at(293.15)
-    assert nominal.fill <= 0.75 + 1e-9  # recommended width gives <= 75 % nominal fill
+    # narrowest width: one rounding step (0.05 mm) narrower would exceed the fill limit
+    assert r.fill_max * r.width_m / (r.width_m - 0.05e-3) > r.fill_limit
 
 
 def test_per_temperature_table():

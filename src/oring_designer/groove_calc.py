@@ -12,9 +12,10 @@ the temperature range x tolerance corners, ``checks.run_checks``):
 2. Gland depth L: bisection so that the worst-case squeeze range over all temperatures and
    corners (cross-section tolerance, depth tolerance, clearance band) is centred on the
    target band. Rounded to ``round_depth_m``.
-3. Groove width: minimum width = width at which the worst-case fill equals the fill limit
-   (fill is proportional to 1/width); recommended width = the larger of the minimum and the
-   width giving 75 % nominal fill at T_ref (Parker optimum). Rounded up to ``round_width_m``.
+3. Groove width: the narrowest width at which the worst-case fill (all temperatures and
+   corners) does not exceed the fill limit (fill is proportional to 1/width), at least 2 R.
+   Rounded up to ``round_width_m``. (A former extra rule, 75 % nominal fill at T_ref, made
+   the grooves wider than the Parker charts and was dropped, user request 2026-11-25.)
 4. Radial glands: diametral clearance band = Parker Design Chart 4-2 E (max halved for
    silicone), its maximum capped by the extrusion limit at the pressure and hardness (full
    eccentricity: one-sided gap = clearance). If even the minimum E exceeds the extrusion
@@ -47,7 +48,6 @@ from .tolerance import Tolerance, WorstCaseResult, worst_case
 
 D_SYN = 1.0  # m, reference diameter of the synthetic gland
 INCH = 0.0254
-FILL_TARGET = 0.75
 _RANK = {Status.PASS: 0, Status.WARN: 1, Status.FAIL: 2}
 
 
@@ -345,9 +345,8 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
 
     # 3. width from fill (fill ~ 1/width)
     wc = evaluate(L, G0)
-    nominal_ref = wc.table[(wc.table.corner == "nominal") & np.isclose(wc.table.T_housing_K, inp.T_ref_K)].iloc[0]
-    G_min = G0 * wc.output_max["fill"] / fill_limit
-    G_rec = max(G_min, G0 * nominal_ref["fill"] / FILL_TARGET, 2 * R + 1e-6)
+    G_min = max(G0 * wc.output_max["fill"] / fill_limit, 2 * R + 1e-6)
+    G_rec = G_min
     G_min = math.ceil(G_min / inp.round_width_m - 1e-9) * inp.round_width_m
     G_rec = math.ceil(G_rec / inp.round_width_m - 1e-9) * inp.round_width_m
     wc = evaluate(L, G_rec)
