@@ -4,6 +4,8 @@
 # dynamic_reciprocating is a placeholder only (K19).
 
 DOGRULANMALI:
+  - "Trelleborg PTFE O-ring Tablo 48: 6.00 mm satırında derinlik 5.60 basılı (diğer satırlarda h/d2 = 0.87-0.92; 5.40 beklenirdi). Basıldığı gibi kullanılıyor; katalogdan teyit edilmeli."
+  - "Parker en az mutlak squeeze (0.178 mm) elastomer kuralıdır; termoplastiklere (PTFE/PCTFE) uygulanmaz (Trelleborg PTFE tabloları bunun altında tasarlıyor)."
   - "Önerilen squeeze bantları Parker Design Chart 4-2 (radyal) ve 4-3 (face) tablolarından; bu tablolar endüstriyel yuvalar içindir. Havacılık için AS5857 (Design Chart 4-1) ayrıca değerlendirilebilir."
   - "squeeze_max %30 Parker'da 'genel maksimum'; Design Chart 4-3 küçük kesitte %32'ye çıkıyor. Bu yüzden WARN seviyesinde tutuldu."
   - "Rod tipi yuvalarda çevresel sıkışma (circumferential_compression_max) için Parker II-IV bölümlerinde değer yok."

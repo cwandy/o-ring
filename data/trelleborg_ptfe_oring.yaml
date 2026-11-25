@@ -1,0 +1,33 @@
+# Trelleborg Sealing Solutions, PTFE O-Rings, Table 48: Installation Dimensions - Metric
+# (catalogue page photo supplied by the user, 2026-11-25). Values as printed.
+# Columns: cross-section d2 [mm], groove depth h [mm] (+0.05/0), groove width b4 [mm] (+0.1/0),
+# radius r1 [mm]. Rows listed "1.78 / 1.80" etc. apply to both cross-sections.
+# Note: the 6.00 row prints h = 5.60 (h/d2 = 0.93; the other rows are 0.87-0.92) - as printed,
+# on the DOGRULANMALI list.
+source: trelleborg_ptfe_oring
+data_quality: vendor
+depth_tol_mm: [0.0, 0.05]
+width_tol_mm: [0.0, 0.1]
+rows:
+  # [d2, h, b4, r1]
+  - [1.50, 1.30, 1.7, 0.2]
+  - [1.60, 1.40, 1.8, 0.3]
+  - [1.78, 1.60, 2.0, 0.4]
+  - [1.80, 1.60, 2.0, 0.4]
+  - [2.00, 1.80, 2.2, 0.5]
+  - [2.40, 2.15, 2.6, 0.5]
+  - [2.50, 2.25, 2.8, 0.5]
+  - [2.62, 2.35, 2.9, 0.6]
+  - [2.65, 2.35, 2.9, 0.6]
+  - [3.00, 2.70, 3.3, 0.8]
+  - [3.53, 3.15, 3.9, 1.0]
+  - [3.55, 3.15, 3.9, 1.0]
+  - [4.00, 3.60, 4.4, 1.0]
+  - [5.00, 4.50, 5.5, 1.0]
+  - [5.30, 4.80, 5.9, 1.2]
+  - [5.33, 4.80, 5.9, 1.2]
+  - [5.70, 5.10, 6.3, 1.2]
+  - [6.00, 5.60, 6.6, 1.2]
+  - [7.00, 6.30, 7.7, 1.5]
+  - [8.00, 7.20, 8.8, 1.5]
+  - [8.40, 7.55, 9.2, 2.0]

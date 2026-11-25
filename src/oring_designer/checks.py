@@ -130,7 +130,11 @@ def check_squeeze(st: GlandState, rules: RuleSet, min_abs: RuleLimit, cs_ref_m: 
     if st.squeeze_min <= 0:
         out.append(CheckResult("squeeze_no_contact", Status.FAIL, st.squeeze_min, 0.0, p))
         return out
-    if min_abs.value is None:
+    # Parker 3.6 absolute minimum (0.007 in) is an elastomer rule: not applied to thermoplastics
+    # (Trelleborg PTFE O-ring grooves are designed below it, e.g. 1.78 mm -> 0.18 mm nominal).
+    if rules.material_group != "elastomer":
+        pass
+    elif min_abs.value is None:
         out.append(_missing("squeeze_min_abs_m"))
     elif st.squeeze_min_abs_m < min_abs.value:
         out.append(CheckResult("squeeze_min_abs", _sev(min_abs), st.squeeze_min_abs_m,

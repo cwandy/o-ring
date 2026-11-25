@@ -73,6 +73,7 @@ class GrooveInput:
     clearance_m: tuple[float, float] | None = None  # radial; None: Parker chart + extrusion limit
     install_stretch: float = 0.0  # radial: I.D. stretch on the groove bottom
     compound: str | None = None  # seal_compounds.yaml id: formula-based band (compression set)
+    ptfe_catalog: bool = True  # PTFE: depth/width/radius from Trelleborg Table 48 when listed
     swell: float = 0.0
     n_temperatures: int = 9
     cs_method: str = "volume_centroid"
@@ -103,6 +104,8 @@ class GrooveResult:
     parker_ref: dict[str, float] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
     band_basis: str = "parker"  # "formula" (compound compression set), "parker" or "user"
+    catalog: str | None = None  # source id when depth / width come from a catalogue table
+    depth_dev_m: tuple[float, float] | None = None  # asymmetric depth deviation (catalogue)
     parker_band: tuple[float, float] | None = None
 
     @property
@@ -221,16 +224,19 @@ def _design(inp: GrooveInput, L: float, G: float, R: float, c_nom: float | None)
 
 
 def _tolerances(inp: GrooveInput, cs_tol: float, depth_tol: float, width_tol: float,
-                c: tuple[float, float] | None) -> dict[str, Tolerance]:
+                c: tuple[float, float] | None,
+                depth_dev: tuple[float, float] | None = None) -> dict[str, Tolerance]:
+    """``depth_dev`` (lower, upper): asymmetric depth deviation, else +/- depth_tol."""
+    lo_d, hi_d = depth_dev if depth_dev is not None else (-depth_tol, depth_tol)
     tols = {"oring.cs_m": Tolerance.symmetric(cs_tol)}
     if inp.gland == "face":
-        tols["gland.groove_depth_m"] = Tolerance.symmetric(depth_tol)
+        tols["gland.groove_depth_m"] = Tolerance(lo_d, hi_d)
         if inp.face_direction == "internal":
             tols["gland.groove_id_m"] = Tolerance(-2 * width_tol, 0.0)  # width +tol / -0
         else:
             tols["gland.groove_od_m"] = Tolerance(0.0, 2 * width_tol)
     else:
-        tols["gland.groove_diameter_m"] = Tolerance.symmetric(2 * depth_tol)
+        tols["gland.groove_diameter_m"] = Tolerance(-2 * hi_d, -2 * lo_d)  # deeper = smaller groove dia
         tols["gland.piston_diameter_m"] = Tolerance.symmetric((c[1] - c[0]) / 2)
         tols["gland.groove_width_m"] = Tolerance(0.0, width_tol)
     return {k: v for k, v in tols.items() if v.lower_m != 0 or v.upper_m != 0}
@@ -323,12 +329,39 @@ def calculate(inp: GrooveInput, ds: Dataset) -> GrooveResult:
                    "clearance_max_m": row.clearance_max_in * INCH}
     c_nom = None if c is None else (c[0] + c[1]) / 2
 
+    cat = None
+    if seal.id == "ptfe" and inp.ptfe_catalog and inp.target_squeeze is None:
+        from .ptfe_catalog import groove as ptfe_groove
+
+        cat = ptfe_groove(inp.cs_m)
+    depth_dev = None
+    if cat is not None:
+        R = cat.radius_m if inp.radius_m is None else R
+        depth_dev = cat.depth_tol_m if inp.depth_tol_m is None else None
+        depth_tol = (cat.depth_tol_m[1] - cat.depth_tol_m[0]) / 2 if inp.depth_tol_m is None else depth_tol
+        width_tol = cat.width_tol_m[1] if inp.width_tol_m is None else width_tol
+        notes.append("ptfe_catalog_interpolated" if cat.interpolated else "ptfe_catalog")
+
     states = _states(inp)
     W = inp.cs_m
-    tols = _tolerances(inp, cs_tol, depth_tol, width_tol, c)
+    tols = _tolerances(inp, cs_tol, depth_tol, width_tol, c, depth_dev)
 
     def evaluate(L: float, G: float) -> WorstCaseResult:
         return worst_case(_design(inp, L, G, R, c_nom), tols, ds, states)
+
+    if cat is not None:  # catalogue dimensions: checked over temperatures and corners, not solved
+        L, G = cat.depth_m, cat.width_m
+        wc = evaluate(L, G)
+        status = max(wc.family_status.values(), key=lambda s: _RANK[s])
+        return GrooveResult(
+            inp=inp, design=_design(inp, L, G, R, c_nom), tolerances=tols, depth_m=L,
+            depth_tol_m=depth_tol, machine_depth_m=L - (c_nom / 2 if c_nom else 0.0),
+            width_min_m=G, width_m=G, width_tol_m=width_tol, radius_m=R, cs_tol_m=cs_tol,
+            clearance_m=c, allowed_gap_m=allowed, target=target, fill_limit=fill_limit, wc=wc,
+            band_basis=basis, parker_band=_parker_band(inp, rules), catalog=cat.source,
+            depth_dev_m=depth_dev, per_temperature=_per_temperature(inp, ds, wc), status=status,
+            parker_ref=parker, notes=notes,
+        )
 
     # 2. depth by bisection on the squeeze mid-point (decreasing in L)
     G0 = max(1.6 * W, 2 * R + 1e-6)

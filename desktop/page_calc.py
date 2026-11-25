@@ -228,6 +228,8 @@ class CalcPage(Page):
                 notes.append(t("ui.backup_required"))
             elif n == "parker_row_nearest":
                 notes.append(t("ui.parker_nearest"))
+            elif n in ("ptfe_catalog", "ptfe_catalog_interpolated"):
+                notes.append(t(f"desktop.{n}"))
             elif n == "below_tr10":
                 from oring_designer.compounds import compounds
                 c = compounds()[self.compound.currentData()]
@@ -247,11 +249,19 @@ class CalcPage(Page):
         sq_lo, sq_hi = res.squeeze_range
         nom_ref = res.nominal_at(T_ref)
         c = self.cards
-        c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
-                 t("ui.cap_depth", tol=Ln(res.depth_tol_m), a=Ln(pr["depth_min_m"]), b=Ln(pr["depth_max_m"])))
-        c[1].set(t("ui.kpi_width"), L(res.width_m),
-                 t("ui.cap_width", tol=Ln(res.width_tol_m), gmin=Ln(res.width_min_m), a=Ln(pr["width_min_m"]),
-                   b=Ln(pr["width_max_m"])))
+        if res.catalog:
+            dlo, dhi = res.depth_dev_m or (-res.depth_tol_m, res.depth_tol_m)
+            c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
+                     t("desktop.cap_catalog", tol=f"+{Ln(dhi)} / {Ln(dlo)}"))
+        else:
+            c[0].set(t("ui.kpi_depth_face" if gland == "face" else "ui.kpi_depth_radial"), L(res.depth_m),
+                     t("ui.cap_depth", tol=Ln(res.depth_tol_m), a=Ln(pr["depth_min_m"]), b=Ln(pr["depth_max_m"])))
+        if res.catalog:
+            c[1].set(t("ui.kpi_width"), L(res.width_m), t("desktop.cap_catalog", tol=f"+{Ln(res.width_tol_m)} / 0"))
+        else:
+            c[1].set(t("ui.kpi_width"), L(res.width_m),
+                     t("ui.cap_width", tol=Ln(res.width_tol_m), gmin=Ln(res.width_min_m), a=Ln(pr["width_min_m"]),
+                       b=Ln(pr["width_max_m"])))
         c[2].set(t("ui.kpi_squeeze"), f"{sq_lo * 100:.1f}–{sq_hi * 100:.1f} %",
                  t("ui.cap_squeeze", a=res.target[0], b=res.target[1],
                    n=(nom_ref.squeeze_min + nom_ref.squeeze_max) / 2, T=U.fmt_T(T_ref)))
@@ -269,8 +279,9 @@ class CalcPage(Page):
         else:
             c[4].show()
             c[5].show()
-        c[6].set(t("ui.kpi_radius"), L(res.radius_m), t("ui.cap_radius", a=Ln(pr["radius_min_m"]),
-                                                          b=Ln(pr["radius_max_m"])))
+        c[6].set(t("ui.kpi_radius"), L(res.radius_m),
+                 t("desktop.cap_catalog", tol="r₁") if res.catalog else
+                 t("ui.cap_radius", a=Ln(pr["radius_min_m"]), b=Ln(pr["radius_max_m"])))
         per_T = res.per_temperature
         lo_row, hi_row = per_T.iloc[0], per_T.iloc[-1]
         c[7].set(t("ui.kpi_volume"), f"{lo_row.volume_change:+.2%}",
@@ -280,7 +291,7 @@ class CalcPage(Page):
 
         gap_txt = f"{Ln(res.clearance_m[0])}–{Ln(res.clearance_m[1])}" if res.clearance_m else None
         self.schematic.show_gland(sketch, {
-            "depth": Ln(res.depth_m, res.depth_tol_m), "width": Ln(res.width_m, (0.0, res.width_tol_m)),
+            "depth": Ln(res.depth_m, res.depth_dev_m or res.depth_tol_m), "width": Ln(res.width_m, (0.0, res.width_tol_m)),
             "radius": Ln(res.radius_m), "cs": Ln(cs_m, res.cs_tol_m), "gap": gap_txt,
             "machine_depth": Ln(res.machine_depth_m) if gland == "radial" else None,
             "ring_id": Ln(ring_id)}, direction)

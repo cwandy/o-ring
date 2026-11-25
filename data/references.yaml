@@ -121,3 +121,8 @@ references:
     url: ""
     accessed: "2026-11-24"
     notes: "Photos of the uncontrolled copy supplied by the user; only the tabulated values are used."
+  - id: trelleborg_ptfe_oring
+    citation: "Trelleborg Sealing Solutions, PTFE O-Rings, Table 48: Installation Dimensions - Metric (groove depth h +0.05, groove width b4 +0.1, radius r1)."
+    url: "https://www.trelleborg.com/seals"
+    accessed: "2026-11-25"
+    notes: "Catalogue page photo supplied by the user."
