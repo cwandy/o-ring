@@ -444,7 +444,9 @@ class CheckPage(Page):
         else:
             self.point_banner.show_text(data_banner_text(any(r.data_quality is not None and r.data_quality.needs_warning
                                                              for r in res_point), mats), "warn")
-            self.point_overall.setText(f"{t('ui.overall')}: {status_text(overall_status(res_point))}")
+            self.point_overall.setText(t("desktop.point_result", Ts=U.fmt_T(self.T_seal.si()),
+                                         Th=U.fmt_T(self.T_housing.si()),
+                                         s=status_text(overall_status(res_point))))
             k = 1e3 if U.L == "mm" else 1 / 0.0254
             self.point_summary.setText(t("ui.geometry_summary", sq_min=st_point.squeeze_min, sq_max=st_point.squeeze_max,
                                          fill=st_point.fill, stretch=st_point.stretch, cs=st_point.cs_eff_m * k,
@@ -463,7 +465,8 @@ class CheckPage(Page):
         self.sweep_banner.show_text(data_banner_text(any(w.result.data_quality is not None and
                                                          w.result.data_quality.needs_warning for w in worst)
                                                      or df["no_data"].notna().any(), mats, (T_lo, T_hi + delta)), "warn")
-        self.sweep_overall.set_status(summary_status(pts))
+        self.sweep_overall.set_status(summary_status(pts), t("desktop.sweep_result", lo=U.fmt_T(T_lo),
+                                                             hi=U.fmt_T(T_hi)))
         self.sweep_table.set_rows([(w.result.status, render_check(w.result),
                                     f"{U.fmt_T(w.T_housing_K)} / {U.fmt_T(w.T_seal_K)}") for w in worst])
         seal = ds.seal_materials[design.seal_material]
