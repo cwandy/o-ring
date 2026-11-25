@@ -529,7 +529,9 @@ def data_banner_text(needs: bool, material_ids: tuple[str, ...] = (),
 
 
 class SvgView(QWidget):
-    """SVG drawn at the widget width, aspect ratio kept (height follows the width)."""
+    """SVG drawn at the widget width, aspect ratio kept (height follows the width, at most MAX_H)."""
+
+    MAX_H = 380
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -541,6 +543,7 @@ class SvgView(QWidget):
         self.renderer.load(QByteArray(svg.encode("utf-8")))
         s = self.renderer.defaultSize()
         self._ratio = s.height() / max(s.width(), 1)
+        self.setFixedHeight(min(int(max(self.width(), 100) * self._ratio), self.MAX_H))
         self.updateGeometry()
         self.update()
 
@@ -549,6 +552,12 @@ class SvgView(QWidget):
 
     def sizeHint(self) -> QSize:
         return QSize(520, int(520 * self._ratio))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        h = min(int(self.width() * self._ratio), self.MAX_H)
+        if abs(self.height() - h) > 1:
+            self.setFixedHeight(h)
 
     def paintEvent(self, e):
         p = QPainter(self)
@@ -572,7 +581,7 @@ class SchematicBox(QFrame):
         cap.setObjectName("panelTitle")
         lay.addWidget(cap)
         self.view = SvgView()
-        lay.addWidget(self.view, 1)
+        lay.addWidget(self.view)
 
     def show_gland(self, kind: str, dims: dict, direction: str = "internal", seal: str = "oring") -> None:
         self.view.set_svg(gland_schematic(kind, dims, UNITS.L, direction, seal, tiny=True))
@@ -716,9 +725,31 @@ class Page(QWidget):
         left.addLayout(self.form)
         left.addStretch(1)
         body.addWidget(lw, 0)
+        # middle column: schematic at its natural height, page-specific results below it
+        mid = QVBoxLayout()
+        mid.setSpacing(10)
         self.schematic = SchematicBox()
         self.schematic.setMinimumWidth(180)
-        body.addWidget(self.schematic, 5)
+        self.schematic.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        mid.addWidget(self.schematic)
+        self.under_panel = QFrame()
+        self.under_panel.setObjectName("panel")
+        upl = QVBoxLayout(self.under_panel)
+        upl.setContentsMargins(10, 8, 6, 8)
+        usa = QScrollArea()
+        usa.setWidgetResizable(True)
+        usa.setFrameShape(QFrame.NoFrame)
+        usa.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        uin = QWidget()
+        uin.setObjectName("panelInner")
+        self.under = QVBoxLayout(uin)
+        self.under.setContentsMargins(0, 0, 4, 0)
+        self.under.setSpacing(6)
+        usa.setWidget(uin)
+        upl.addWidget(usa)
+        self.under_panel.setMinimumHeight(140)
+        mid.addWidget(self.under_panel, 1)
+        body.addLayout(mid, 5)
         sw = QFrame()
         sw.setObjectName("panel")
         sl = QVBoxLayout(sw)
@@ -753,6 +784,9 @@ class Page(QWidget):
         self.results_widget = self.details_widget  # compatibility: disabled on error
         self.groups: dict[str, QGroupBox] = {}
         self._timer = debounce(self, self._run)
+
+    def hasHeightForWidth(self) -> bool:  # wrapped labels must not make the scroll area taller
+        return False
 
     def _toggle_details(self, on: bool) -> None:
         self.details_widget.setVisible(on)

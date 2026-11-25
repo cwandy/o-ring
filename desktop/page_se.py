@@ -76,10 +76,12 @@ class SpringPage(Page):
         self.banner = Banner()
         self.seal_note = Banner()
         self.table = StatusTable()
-        for w in (self.overall, self.cat_banner, self.banner, self.seal_note, heading(t("ui.se_results"), 13),
-                  self.table):
+        for w in (self.overall, self.cat_banner, self.banner, self.seal_note):
             sm.addWidget(w)
         sm.addStretch(1)
+        self.under.addWidget(heading(t("ui.se_results"), 13))
+        self.under.addWidget(self.table)
+        self.under.addStretch(1)
         r = self.details
         self.plot = PlotHolder()
         btn = QPushButton(t("ui.download_csv"))

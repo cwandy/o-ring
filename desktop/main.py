@@ -26,12 +26,35 @@ from oring_designer.i18n import t  # noqa: E402
 APP_ICON = HERE / "assets" / "icon.png"
 
 
+class PageArea(QScrollArea):
+    """Scroll area that fits the page to the window while the details are closed (wrapped
+    labels would otherwise ask for more height than needed and add a scroll bar)."""
+
+    def __init__(self, page: QWidget):
+        super().__init__()
+        self.setWidgetResizable(True)
+        self.setWidget(page)
+        self.setFrameShape(QScrollArea.NoFrame)
+        self.page = page
+        if hasattr(page, "details_btn"):
+            page.details_btn.toggled.connect(lambda *_: self._fit())
+
+    def _fit(self) -> None:
+        page = self.page
+        details = getattr(page, "details_widget", None)
+        if details is not None and not details.isHidden():
+            page.setMinimumHeight(0)
+            page.setMaximumHeight(16777215)
+        else:
+            page.setFixedHeight(max(self.viewport().height(), page.minimumSizeHint().height()))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._fit()
+
+
 def scroll(page: QWidget) -> QScrollArea:
-    area = QScrollArea()
-    area.setWidgetResizable(True)
-    area.setWidget(page)
-    area.setFrameShape(QScrollArea.NoFrame)
-    return area
+    return PageArea(page)
 
 
 class MainWindow(QMainWindow):

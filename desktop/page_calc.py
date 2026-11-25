@@ -102,9 +102,11 @@ class CalcPage(Page):
         grid = QGridLayout()
         grid.setSpacing(6)
         self.cards = [Card() for _ in range(9)]  # 8: force (total / clamp)
+        self.card_grid = grid
         for i, c in enumerate(self.cards):
-            grid.addWidget(c, i // 2, i % 2)
-        sm.addLayout(grid)
+            grid.addWidget(c, i // 3, i % 3)
+        self.under.addLayout(grid)
+        self.under.addStretch(1)
         self.force_hint = Banner()
         sm.addWidget(self.force_hint)
         sm.addWidget(heading(t("ui.calc_checks"), 13))
@@ -409,7 +411,17 @@ class CalcPage(Page):
         self.cards[8].setVisible(bool(self.clamp_text))
         if self.clamp_text:
             self.cards[8].set(*self.clamp_text)
+        self._layout_cards()
         self.force_hint.show_text(msgs[0] if msgs and (len(msgs) > 1 or not self.clamp_text) else "", "info")
+
+    def _layout_cards(self) -> None:
+        """Visible cards packed three per row (no gaps for hidden ones)."""
+        for c in self.cards:
+            self.card_grid.removeWidget(c)
+        order = [8, 0, 1, 2, 3, 4, 5, 6, 7]  # clamp load first
+        vis = [self.cards[i] for i in order if not self.cards[i].isHidden()]
+        for i, c in enumerate(vis):
+            self.card_grid.addWidget(c, i // 3, i % 3)
 
     def _save_csv(self) -> None:
         if self._per_T is not None:

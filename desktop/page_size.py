@@ -129,10 +129,11 @@ class SizePage(Page):
         sm.addStretch(1)
 
         r = self.details
-        self.detail_title = heading("")
-        r.addWidget(self.detail_title)
+        self.detail_title = heading("", 13)
+        self.under.addWidget(self.detail_title)
         self.dims = Table()
-        r.addWidget(self.dims)
+        self.under.addWidget(self.dims)
+        self.under.addStretch(1)
         self.plot = PlotHolder()
         r.addWidget(self.plot)
         r.addWidget(heading(t("ui.section")))

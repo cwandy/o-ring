@@ -141,7 +141,8 @@ def _limit(code: str, value: float, limit: float | None, too_low: bool, params: 
            quality: DataQuality = DataQuality.USER_INPUT) -> CheckResult | None:
     if limit is None:
         return None
-    bad = value < limit if too_low else value > limit
+    eps = 1e-6  # 1 um: values equal to the limit within measuring resolution pass
+    bad = value < limit - eps if too_low else value > limit + eps
     return CheckResult(f"{code}_{'fail' if bad else 'ok'}", Status.FAIL if bad else Status.PASS,
                        value, limit, params | {"limit_mm": limit * 1e3}, quality)
 
